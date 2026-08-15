@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account Status Report — Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#1B2A4A;--navy-2:#26395F;--gold:#B8860B;--gold-soft:#D9B24A;--cream:#F6F1E7;--paper:#FBF8F1;--card:#FFFFFF;--ink:#1C2634;--muted:#6E7889;--line:#E7DFCF;--line-2:#EFE9DC;--ok:#2E7D57;--watch:#B07D0A;--act:#B23A2E;--logi:#3C5C7A;--client:#6B5AA6;--done:#2E7D57;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+html,body{background:#ECE6D9;color:var(--ink);font-family:"IBM Plex Sans",system-ui,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:"IBM Plex Mono","IBM Plex Sans",monospace;font-variant-numeric:tabular-nums}
+
+.appbar{position:sticky;top:0;z-index:40;background:var(--navy);color:#EDE7D8;display:flex;align-items:center;gap:10px;padding:8px 14px;box-shadow:0 2px 10px rgba(20,30,50,.25);flex-wrap:wrap}
+.appbar .logo{width:26px;height:26px;border:1.4px solid var(--gold);border-radius:3px;display:grid;place-items:center;flex:none}
+.appbar .logo::before{content:"◆";color:var(--gold-soft);font-size:11px}
+.appbar h1{font-family:"Fraunces",Georgia,serif;font-size:15px;font-weight:600;white-space:nowrap}
+.appbar h1 span{color:var(--gold-soft)}
+.clientbox{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:3px 5px 3px 9px}
+.clientbox label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-soft);font-weight:700}
+.clientbox select{font:inherit;font-size:13px;font-weight:600;color:#fff;background:transparent;border:none;max-width:190px;cursor:pointer}
+.clientbox select option{color:#1C2634}
+.iconbtn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:#EDE7D8;width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:13px;display:grid;place-items:center}
+.iconbtn:hover{background:rgba(255,255,255,.18)}
+.grow{flex:1}
+.tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.btn{font:inherit;font-size:12px;font-weight:600;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);color:#EDE7D8;padding:6px 11px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:rgba(255,255,255,.14)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#241a02}.btn.gold:hover{background:var(--gold-soft)}
+.saved{font-size:11px;color:var(--gold-soft);opacity:0;transition:opacity .3s}.saved.show{opacity:1}
+
+.tabs{position:sticky;top:43px;z-index:39;background:var(--paper);border-bottom:1px solid var(--line);display:flex;gap:2px;padding:0 12px;overflow-x:auto}
+.tab{font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;padding:11px 12px 9px;cursor:pointer;white-space:nowrap}
+.tab.active{color:var(--navy);border-color:var(--gold)}
+.tab .badge{font-size:10px;background:var(--cream);color:var(--navy);border:1px solid var(--line);border-radius:9px;padding:0 6px;margin-left:5px;font-family:"IBM Plex Mono"}
+
+main{max-width:1180px;margin:0 auto;padding:16px}
+.panel{display:none}.panel.active{display:block}
+.panel-intro{color:var(--muted);font-size:13px;margin-bottom:14px;line-height:1.5}.panel-intro b{color:var(--navy)}
+
+.add-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap}
+.add-bar h2{font-family:"Fraunces",Georgia,serif;font-size:19px;color:var(--navy);font-weight:600}
+.add-bar .count{font-size:12px;color:var(--muted)}
+.mcard{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:13px 14px;margin-bottom:11px}
+.mcard .ttl{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.mcard .ttl .idx{width:22px;height:22px;border-radius:5px;background:var(--navy);color:var(--gold-soft);font-family:"IBM Plex Mono";font-size:11px;font-weight:600;display:grid;place-items:center;flex:none}
+.mcard .ttl .name{font-weight:700;color:var(--navy);font-size:13.5px}
+.mcard .ttl .tagoc{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em}
+.oc-Open{background:#EEF3F8;color:var(--logi)}.oc-Won{background:#EAF3F0;color:#1F7A57}.oc-Lost{background:#F4ECEB;color:var(--act)}
+.mcard .del{background:none;border:1px solid var(--line);color:var(--act);border-radius:6px;padding:4px 9px;font:inherit;font-size:11px;font-weight:600;cursor:pointer;margin-left:auto}
+.mcard .del:hover{background:#fbeeec}
+.ttl-actions{margin-left:auto;display:flex;gap:8px}.ttl-actions .del{margin-left:0}
+.deliver{background:none;border:1px solid #cfe3d6;color:var(--ok);border-radius:6px;padding:4px 9px;font:inherit;font-size:11px;font-weight:600;cursor:pointer}.deliver:hover{background:#eef6f1}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px 12px}
+.f{display:flex;flex-direction:column;gap:3px}.f.wide{grid-column:1/-1}
+.f label{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.f input,.f select,.f textarea{font:inherit;font-size:13px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%}
+.f textarea{resize:vertical;min-height:44px;line-height:1.4}
+.f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--gold);background:#fff}
+.add-btn{width:100%;border:1.5px dashed var(--line);background:var(--paper);color:var(--navy);font:inherit;font-size:13px;font-weight:600;padding:12px;border-radius:9px;cursor:pointer}
+.add-btn:hover{border-color:var(--gold);background:#fff}
+.hint{font-size:11px;color:var(--muted);margin-top:3px}
+.kpi-note{background:#FBF3DE;border:1px solid var(--gold-soft);border-radius:8px;padding:10px 13px;font-size:12px;color:#7a5a08;margin-bottom:14px}.kpi-note b{color:var(--navy)}
+.datalegend{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:14px 16px;margin-top:4px}
+.datalegend h4{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);margin-bottom:10px}
+.dlrow{display:flex;gap:11px;padding:9px 0;border-top:1px solid var(--line-2);font-size:12.5px;line-height:1.45}
+.dlrow:first-of-type{border-top:none}
+.dlrow .dlk{flex:none;font-weight:700;color:#fff;border-radius:6px;padding:3px 10px;height:fit-content;font-size:11px}
+.dlk.b1{background:var(--navy)}.dlk.b2{background:var(--gold)}.dlk.b3{background:var(--act)}.dlrow b{color:var(--navy)}
+.logobox{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.logopreview{width:120px;height:74px;border:1px solid var(--line);border-radius:8px;background:var(--paper);display:grid;place-items:center;overflow:hidden;flex:none}
+.logopreview img{max-width:100%;max-height:100%;object-fit:contain}
+.logopreview .ph{font-size:10px;color:var(--muted);text-align:center;padding:6px}
+.ovh{font-family:"Fraunces",Georgia,serif;font-size:15px;color:var(--navy);margin:6px 0 8px}
+.ovwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;margin-bottom:20px;background:var(--card)}
+.mtable{width:100%;border-collapse:collapse;min-width:1160px}
+.mtable th{background:var(--paper);color:var(--navy);font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;padding:9px 8px;text-align:left;white-space:nowrap;border-bottom:2px solid var(--gold)}
+.mtable td{padding:3px 6px;border-bottom:1px solid var(--line-2);font-size:12px;vertical-align:middle}
+.mtable .grouprow td{background:#FCF3DE;font-weight:700;color:var(--navy);font-size:11px;letter-spacing:.04em;padding:6px 10px;border-bottom:1px solid var(--gold-soft)}
+.mtable input.mini,.mtable select.mini{font:inherit;font-size:12px;border:1px solid transparent;background:transparent;border-radius:5px;padding:4px 5px;width:100%;color:var(--ink)}
+.mtable select.mini{padding-right:22px;min-width:96px}
+.mtable input.mini:hover,.mtable select.mini:hover{border-color:var(--line)}
+.mtable input.mini:focus,.mtable select.mini:focus{border-color:var(--gold);background:#fff;outline:none}
+.ovcli{font-size:11px;color:var(--muted);white-space:nowrap}.ovempty{color:var(--muted);font-size:11px;font-style:italic;padding:6px 10px}
+
+.report-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.report-bar .lead{font-size:12.5px;color:var(--muted)}
+.report-bar .rt{display:flex;gap:8px;align-items:center}
+.pagetag{font-size:11px;font-weight:600;color:var(--navy);background:var(--cream);border:1px solid var(--line);border-radius:20px;padding:3px 10px}
+.modetog{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.mt{font:inherit;font-size:12px;font-weight:600;padding:6px 12px;background:#fff;color:var(--muted);border:none;cursor:pointer}
+.mt.active{background:var(--navy);color:#fff}
+#reportViewport{overflow:auto;background:#ECE6D9;border-radius:10px;padding:12px 0}
+#reportScale{transform-origin:top center}
+
+/* ===== REPORT ===== */
+.sheet{width:297mm;min-height:210mm;background:var(--paper);position:relative;margin:0 auto;box-shadow:0 18px 44px -16px rgba(20,30,50,.4);display:flex;flex-direction:column;padding:6mm 9mm 6mm}
+.tabnum{font-variant-numeric:tabular-nums lining-nums}
+.r-masthead{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:8px;border-bottom:2px solid var(--navy);position:relative}
+.r-masthead::after{content:"";position:absolute;left:0;bottom:-2px;width:132px;height:2px;background:var(--gold)}
+.brand{display:flex;gap:13px;align-items:center}
+.mark{width:46px;height:46px;border:1.5px solid var(--gold);border-radius:4px;display:grid;place-items:center;background:var(--navy);flex:none;position:relative}
+.mark:not(.haslogo)::before{content:"◆";color:var(--gold-soft);font-size:17px}
+.mark.haslogo{width:auto;min-width:58px;max-width:150px;height:58px;background:#fff;padding:4px 6px;border-color:var(--gold);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.mark.haslogo img{height:46px;width:auto;max-width:138px;object-fit:contain;display:block}
+.mark span{position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);font-size:5.4px;letter-spacing:.14em;color:var(--muted);white-space:nowrap;font-weight:600}
+.brand-txt .eyebrow{font-size:8px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);font-weight:700}
+.brand-txt h2{font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:22px;line-height:1.02;color:var(--navy);margin-top:2px}
+.brand-txt .sub{font-size:9px;color:var(--muted);margin-top:2px}
+.meta{display:grid;grid-template-columns:auto auto;gap:2px 20px;text-align:right;font-size:8.4px;padding-top:2px}
+.meta dt{color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-size:7.4px;font-weight:600;align-self:center}
+.meta dd{color:var(--navy);font-weight:600}.meta .accent{color:var(--gold)}
+.kpis{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:8px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:6px 8px 5px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold)}
+.kpi.nav::before{background:var(--navy)}.kpi.grn::before{background:var(--ok)}
+.kpi .k-label{font-size:6.6px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;line-height:1.1;min-height:14px}
+.kpi .k-val{font-family:"Fraunces",Georgia,serif;font-size:16px;font-weight:600;color:var(--navy);line-height:1;margin-top:4px}
+.kpi .k-val small{font-size:8.5px;font-weight:500;color:var(--muted);font-family:"IBM Plex Sans"}
+.kpi .k-foot{font-size:6.8px;color:var(--muted);margin-top:3px;line-height:1.15;min-height:8px}
+.roster{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:8px;color:var(--muted);align-items:center}
+.roster .rlab{font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.08em;font-size:7.4px}
+.roster .r{display:inline-flex;align-items:center;gap:4px}.roster i{width:8px;height:8px;border-radius:2px;display:inline-block}.roster b{color:var(--navy)}
+.sec-h{display:flex;align-items:center;gap:8px;margin:9px 0 4px}
+.sec-h .n{font-family:"IBM Plex Mono";font-size:8px;color:var(--gold);font-weight:600;border:1px solid var(--line);border-radius:2px;padding:1px 4px}
+.sec-h h3{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--navy);font-weight:700}
+.sec-h .rule{flex:1;height:1px;background:var(--line)}.sec-h .aside{font-size:8px;color:var(--muted)}
+.journey{background:linear-gradient(180deg,#fff,#FCFAF4);border:1px solid var(--line);border-radius:6px;padding:14px 12px 10px;break-inside:avoid}
+.stops{display:grid;align-items:start}
+.stop{position:relative;text-align:center;padding-top:2px}
+.stop::after{content:"";position:absolute;top:6px;left:50%;width:100%;height:2px;background:var(--line);z-index:0}
+.stop:last-child::after{display:none}.stop.reached::after{background:linear-gradient(90deg,var(--navy),var(--gold-soft))}
+.stop .dot{width:11px;height:11px;border-radius:50%;background:#fff;border:2px solid var(--line);margin:0 auto;position:relative;z-index:1}
+.stop.reached .dot{background:var(--navy);border-color:var(--navy)}
+.stop.active .dot{background:var(--gold);border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,134,11,.2)}
+.stop .s-lab{font-size:6.7px;letter-spacing:.01em;color:var(--navy);font-weight:600;text-transform:uppercase;line-height:1.1;margin-top:5px;padding:0 1px}
+.chips{display:flex;flex-direction:column;gap:2px;align-items:center;margin-top:4px}
+.chip{font-family:"IBM Plex Mono";font-size:6.6px;font-weight:500;padding:1px 4px;border-radius:8px;background:var(--cream);border:1px solid var(--line);color:var(--navy);white-space:nowrap}
+.chip.g{background:#FBF3DE;border-color:var(--gold-soft);color:#8A6608}.chip.b{background:#EEF3F8;border-color:#CBD9E6;color:var(--logi)}.chip.n{background:#EDF4EF;border-color:#C7E0D1;color:var(--ok)}
+.chip i{width:5px;height:5px;border-radius:50%;display:inline-block;margin-right:3px;vertical-align:middle}
+.journey-legend{display:flex;gap:14px;margin-top:10px;font-size:7px;color:var(--muted);justify-content:flex-end}
+.lg{display:inline-flex;align-items:center;gap:4px}.lg i{width:7px;height:7px;border-radius:50%;display:inline-block}
+table{width:100%;border-collapse:collapse}
+.ops thead th,.neg thead th{background:var(--navy);color:#EDE7D8;font-size:7px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;padding:5px 6px;text-align:left}
+.ops tbody td,.neg tbody td{font-size:8.4px;padding:4px 6px;border-bottom:1px solid var(--line-2);vertical-align:middle}
+.ops tbody tr:nth-child(even),.neg tbody tr:nth-child(even){background:#FCF9F2}
+tr{break-inside:avoid}
+.po{font-family:"IBM Plex Mono";font-weight:600;color:var(--navy);font-size:8px;white-space:nowrap}
+.ndr{font-family:"IBM Plex Mono";font-weight:600;color:var(--gold);font-size:7.6px;white-space:nowrap}
+.addpo{color:var(--act);font-weight:700;font-size:7.4px}
+.ccode{font-family:"IBM Plex Mono";font-size:6.6px;font-weight:700;padding:1px 4px;border-radius:3px;color:#fff;white-space:nowrap;display:inline-block}
+.prod{font-weight:600;color:var(--ink)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.val{text-align:right;font-family:"IBM Plex Mono";font-weight:600;color:var(--navy)}
+.ic{font-size:7.4px;color:var(--muted);white-space:nowrap}
+.bar{height:5px;width:56px;background:var(--line);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-soft))}
+.barlab{font-size:7px;color:var(--muted);margin-left:4px}
+.pill{display:inline-block;font-size:7px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:9px;white-space:nowrap}
+.p-conf{background:#EEF3F8;color:var(--logi)}.p-prod{background:#FBF3DE;color:#8A6608}.p-insp{background:#FBEEDC;color:#9A5B12}
+.p-ready{background:#EAF3F0;color:#1F7A57}.p-book{background:#EDEBF6;color:#5B4A8A}.p-load{background:#EDF1F7;color:#37567A}.p-transit{background:#E9F2F4;color:#2C6C7C}
+.qc{display:inline-flex;align-items:center;gap:3px;font-size:7.8px;color:var(--muted)}
+.qc .d{width:6px;height:6px;border-radius:50%;flex:none}
+.qc.pass .d{background:var(--ok)}.qc.pass{color:var(--ok);font-weight:600}
+.qc.due .d{background:var(--watch)}.qc.due{color:var(--watch);font-weight:600}
+.qc.na .d{background:var(--line);border:1px solid #d8cfbb}
+.neg .ref{font-family:"IBM Plex Mono";font-size:7.6px;color:var(--gold);font-weight:600;white-space:nowrap}
+.neg .topic{font-weight:600;color:var(--ink)}.neg .nextcol{font-size:7.8px;color:var(--muted)}
+.stage-tag{font-size:6.8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:4px;white-space:nowrap;display:inline-block}
+.st-q{background:#EEF3F8;color:var(--logi)}.st-n{background:#FBF3DE;color:#8A6608}.st-p{background:#F1ECF7;color:#5B4A8A}.st-i{background:#F0F0F0;color:#555}
+.smp{font-size:6.6px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 5px;border-radius:4px;white-space:nowrap;display:inline-block}
+.smp-na{background:#EFEFEF;color:#777}.smp-req{background:#EEF3F8;color:var(--logi)}.smp-pend{background:#FBF3DE;color:#8A6608}.smp-deliv{background:#E9F2F4;color:#2C6C7C}.smp-appr{background:#EAF3F0;color:#1F7A57}.smp-rej{background:#F4ECEB;color:var(--act)}
+.actblock{border:1px solid var(--line);border-radius:6px;background:var(--card);overflow:hidden;break-inside:avoid}
+.actblock .mini-title{font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--navy);font-weight:700;padding:7px 9px;display:flex;justify-content:space-between}
+.actblock .mini-title .cnt{font-family:"IBM Plex Mono";font-size:7.4px;color:var(--gold)}
+.act-legend{display:flex;flex-wrap:wrap;gap:12px;padding:0 9px 6px;border-bottom:1px solid var(--line-2);font-size:7px;color:var(--muted)}
+.act-legend .l{display:inline-flex;align-items:center;gap:4px}.act-legend i{width:9px;height:9px;border-radius:3px;display:inline-block}
+.actions{padding:6px 9px}
+.act-row{display:flex;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:8.4px;line-height:1.3;break-inside:avoid}
+.act-row:last-child{border-bottom:none}
+.act-row .tag{flex:none;width:16px;height:16px;border-radius:4px;display:grid;place-items:center;font-size:8px;font-weight:700;color:#fff;margin-top:1px}
+.t-red{background:var(--act)}.t-gold{background:var(--gold)}.t-blue{background:var(--logi)}.t-client{background:var(--client)}.t-grn{background:var(--ok)}
+.act-row b{color:var(--navy)}.act-row .who{color:var(--muted);font-size:7.4px}
+.fcnote{font-size:7px;color:var(--muted);margin-top:5px;line-height:1.4}
+.r-foot{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:6px;border-top:1px solid var(--line);font-size:7.6px;color:var(--muted)}
+.r-foot .conf{letter-spacing:.12em;text-transform:uppercase;font-weight:600;color:var(--navy)}.r-foot .who b{color:var(--navy)}
+
+@page{size:A4 landscape;margin:0}
+@media print{
+  html,body{background:#fff}
+  .appbar,.tabs,.report-bar,#fileImport,#logoInput{display:none!important}
+  main{max-width:none;margin:0;padding:0}
+  .panel{display:none!important}#panel-report{display:block!important}
+  #reportViewport{overflow:visible;padding:0;background:#fff;border-radius:0}
+  #reportScale{transform:none!important;height:auto!important;width:auto!important}
+  .sheet{box-shadow:none;width:auto;min-height:0;padding:9mm;background:#fff}
+  .ops thead,.neg thead{display:table-header-group}
+  .ops tbody td,.neg tbody td{padding-top:4.5px;padding-bottom:4.5px}
+  .sec-h,.kpis,.r-masthead,.journey,.actblock{break-inside:avoid}
+}
+@media (max-width:660px){.appbar h1 .full{display:none}}
+</style>
+</head>
+<body>
+
+<div class="appbar">
+  <div class="logo"></div>
+  <h1><span class="full">Account Status Report · </span>Manager</h1>
+  <div class="clientbox"><label>Client</label><select id="clientSelect"></select>
+    <button class="iconbtn" data-action="client-new" title="New client">＋</button>
+    <button class="iconbtn" data-action="client-rename" title="Rename client">✎</button>
+    <button class="iconbtn" data-action="client-del" title="Delete client">🗑</button></div>
+  <div class="grow"></div>
+  <span class="saved" id="savedTag">Saved ✓</span>
+  <div class="tools"><button class="btn" data-action="import">↥ Import</button><button class="btn" data-action="export">↧ Backup</button><button class="btn gold" data-action="print">🖨 Save PDF</button></div>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" data-tab="report">Report</button>
+  <button class="tab" data-tab="overview">All Clients</button>
+  <button class="tab" data-tab="pos">Purchase Orders <span class="badge" id="b-pos">0</span></button>
+  <button class="tab" data-tab="neg">Negotiations <span class="badge" id="b-neg">0</span></button>
+  <button class="tab" data-tab="actions">Actions <span class="badge" id="b-act">0</span></button>
+  <button class="tab" data-tab="closed">Closed <span class="badge" id="b-cl">0</span></button>
+  <button class="tab" data-tab="settings">Settings</button>
+</div>
+
+<main id="main">
+  <section class="panel active" id="panel-report">
+    <div class="report-bar"><div class="lead">Live preview. <span class="pagetag" id="pageTag">1 page</span></div>
+      <div class="rt"><div class="modetog"><button class="mt active" data-mode="client">This client</button><button class="mt" data-mode="all">All clients</button></div>
+      <button class="btn gold" data-action="print" style="color:#241a02">🖨 Save as PDF</button></div></div>
+    <div id="reportViewport"><div id="reportScale"><div id="reportRoot"></div></div></div>
+  </section>
+
+  <section class="panel" id="panel-overview">
+    <div class="add-bar"><h2>All Clients — Orders &amp; Pipeline</h2></div>
+    <div class="panel-intro">Check and update every client's <b>confirmed orders</b> and <b>commercial pipeline</b> in one place. Changes sync straight back to each client's report.</div>
+    <h3 class="ovh">Confirmed Orders &amp; Operations — all clients</h3>
+    <div class="ovwrap" id="ov-orders"></div>
+    <h3 class="ovh">Commercial Pipeline — all clients</h3>
+    <div class="ovwrap" id="ov-pipeline"></div>
+  </section>
+
+  <section class="panel" id="panel-pos">
+    <div class="add-bar"><h2>Purchase Orders</h2><span class="count" id="c-pos"></span></div>
+    <div class="panel-intro"><b>Client PO</b> is the client's number; <b>NDR ref</b> is Nandera's internal reference. When a PO is delivered, click <b>✓ Mark delivered</b> to move it to Closed.</div>
+    <div id="list-pos"></div>
+    <button class="add-btn" data-add="pos">＋ Add purchase order</button>
+  </section>
+
+  <section class="panel" id="panel-neg">
+    <div class="add-bar"><h2>Commercial Pipeline</h2><span class="count" id="c-neg"></span></div>
+    <div class="panel-intro">Only <b>Open</b> topics appear in the report. <b>Won</b> keeps it for history <b>and</b> auto-creates a draft PO. <b>Sample status</b> shows whether samples are pending or approved.</div>
+    <div id="list-neg"></div>
+    <button class="add-btn" data-add="neg">＋ Add negotiation topic</button>
+  </section>
+
+  <section class="panel" id="panel-actions">
+    <div class="add-bar"><h2>Action Items &amp; Alerts</h2><span class="count" id="c-act"></span></div>
+    <div class="panel-intro">The <b>type</b> colours the tag and matches the legend on the report.</div>
+    <div id="list-act"></div>
+    <button class="add-btn" data-add="act">＋ Add action item</button>
+  </section>
+
+  <section class="panel" id="panel-closed">
+    <div class="add-bar"><h2>Closed / Delivered</h2><span class="count" id="c-cl"></span></div>
+    <div class="panel-intro">Delivered deals feed <b>Delivered POs</b> and <b>Closed Order Value</b> (realised revenue).</div>
+    <div id="list-cl"></div>
+    <button class="add-btn" data-add="cl">＋ Add closed deal</button>
+  </section>
+
+  <section class="panel" id="panel-settings">
+    <div class="add-bar"><h2>Settings</h2></div>
+    <div class="kpi-note"><b>Auto-calculated:</b> In Negotiation, Active POs, Open Order Value, In Production, Cargo Ready, In Transit, Delivered POs and Closed Order Value.</div>
+    <div id="list-settings"></div>
+  </section>
+</main>
+
+<input type="file" id="fileImport" accept="application/json,.json" style="display:none">
+<input type="file" id="logoInput" accept="image/*" style="display:none">
+
+<script>"use strict";
+/**
+ * Storage bridge — same contract as window.storage in the HTML prototype.
+ * Replaces browser-local persistence with authenticated API + SQLite.
+ */
+(function () {
+  async function api(path, options) {
+    const res = await fetch(path, {
+      credentials: "same-origin",
+      ...options,
+      headers: {
+        Accept: "application/json",
+        ...(options && options.body
+          ? { "Content-Type": "application/json" }
+          : {}),
+        ...(options && options.headers),
+      },
+    });
+    if (res.status === 401) {
+      window.location.href = "/login";
+      throw new Error("Unauthorized");
+    }
+    if (!res.ok) {
+      let msg = "Request failed";
+      try {
+        const j = await res.json();
+        msg = j.error || msg;
+      } catch (_) {}
+      throw new Error(msg);
+    }
+    return res;
+  }
+
+  window.storage = {
+    async get(_key) {
+      const res = await api("/api/store");
+      const data = await res.json();
+      return { value: JSON.stringify(data) };
+    },
+    async set(_key, value) {
+      // value is already JSON.stringify(store)
+      await api("/api/store", { method: "PUT", body: value });
+    },
+  };
+})();
+</script>
+<script>
+"use strict";
+const KEY="account_status_report_v2";
+const uid=()=>Math.random().toString(36).slice(2,9);
+const POS_STAGES=["Confirmed","In Production","Inspection","Cargo Ready","Booked","Loaded","In Transit","Arrived"];
+const INSP_STATES=["Pending","Booked","Concluded","Passed"];
+const NEG_STAGES=["Inquiry","Proposal"];
+const NEG_OUTCOMES=["Open","Won","Lost"];
+const NEG_SAMPLES=["N/A","Requested","Pending","Delivered","Approved","Rejected"];
+const ACT_TYPES=[["red","Action required"],["gold","Watch"],["blue","Logistics"],["client","Client"],["grn","Positive"]];
+const ACT_SYM={red:"!",gold:"◆",blue:"⇢",client:"◑",grn:"✓"};
+const DELIVERED_MODES=["Hidden","Count","Listed"];
+const STOPS=["Inquiry","Proposal","PO Confirmed","Production","Inspection","Cargo Ready","Booked","Loaded","In Transit","Arrived","Delivered"];
+const PALETTE=["#B8860B","#1B2A4A","#3C5C7A","#6B5AA6","#2E7D57","#9A5B12","#2C6C7C","#8A5A2B"];
+const PROB={Inquiry:0.25,Proposal:0.70};
+let pendingWonAlert=null, reportMode="client";
+
+function blankData(name){return {meta:{company:"YOUR LOGO",title:"Account Status Report",client:name||"New Client",accountManager:"Trading Desk",period:"",issued:"",reportNo:"",tradeLane:"China → Brazil (BR)",preparedBy:"Trading Desk",contact:"desk@company.com"},kpi:{activeFoot:"vs. last month",transitFoot:"upcoming arrivals"},pos:[],neg:[],act:[],closed:[]};}
+function ventoSul(){const d=blankData("Vento Sul Importação Ltda.");d.meta.accountManager="F. — Trading Desk";d.meta.period="July 2026";d.meta.issued="05 Aug 2026";d.meta.reportNo="VS·ASR·2026-07";d.kpi.activeFoot="▲ 2 vs. Jun";d.kpi.transitFoot="next ETA 19 Aug · Paranaguá";
+  d.pos=[
+    {id:uid(),code:"PO-2026-0151",ndr:"NDR-2601",product:"Paper cups 8oz DW",qty:"1.15M pcs",value:98900,incoterm:"FOB Qingdao",prod:5,insp:"Pending",inspDate:"",cargoReady:"12 Sep",eta:"18 Oct",port:"Santos",stage:"Confirmed"},
+    {id:uid(),code:"PO-2026-0149",ndr:"NDR-2602",product:"Cornstarch clamshells",qty:"2×40′HC",value:71200,incoterm:"FOB Shenzhen",prod:60,insp:"Booked",inspDate:"22 Aug",cargoReady:"30 Aug",eta:"05 Oct",port:"Santos",stage:"In Production"},
+    {id:uid(),code:"PO-2026-0148",ndr:"NDR-2603",product:"Bamboo stirrers",qty:"6.0M pcs",value:75000,incoterm:"FOB Ningbo",prod:80,insp:"Booked",inspDate:"18 Aug",cargoReady:"26 Aug",eta:"01 Oct",port:"Paranaguá",stage:"In Production"},
+    {id:uid(),code:"PO-2026-0146",ndr:"NDR-2604",product:"Paper straws",qty:"3.2M pcs",value:41600,incoterm:"FOB Ningbo",prod:100,insp:"Booked",inspDate:"08 Aug",cargoReady:"15 Aug",eta:"20 Sep",port:"Santos",stage:"Inspection"},
+    {id:uid(),code:"PO-2026-0145",ndr:"NDR-2605",product:"Kraft food boxes",qty:"2×40′HC",value:88400,incoterm:"FOB Qingdao",prod:100,insp:"Passed",inspDate:"",cargoReady:"Ready 06 Aug",eta:"12 Sep",port:"Itajaí",stage:"Cargo Ready"},
+    {id:uid(),code:"PO-2026-0144",ndr:"NDR-2606",product:"Sugarcane bowls",qty:"1×40′HC",value:46700,incoterm:"FOB Qingdao",prod:100,insp:"Passed",inspDate:"",cargoReady:"Booked 05 Aug",eta:"10 Sep",port:"Santos",stage:"Booked"},
+    {id:uid(),code:"PO-2026-0143",ndr:"NDR-2607",product:"PLA cutlery sets",qty:"1×40′HC",value:52300,incoterm:"FOB Shenzhen",prod:100,insp:"Passed",inspDate:"",cargoReady:"Loaded 02 Aug",eta:"08 Sep",port:"Santos",stage:"Loaded"},
+    {id:uid(),code:"PO-2026-0141",ndr:"NDR-2608",product:"Paper cups 12oz",qty:"0.90M pcs",value:79200,incoterm:"CIF Santos",prod:100,insp:"Passed",inspDate:"",cargoReady:"ETD 19 Jul",eta:"24 Aug",port:"Santos",stage:"In Transit"},
+    {id:uid(),code:"PO-2026-0140",ndr:"NDR-2609",product:"Bagasse plates",qty:"30 CBM",value:63700,incoterm:"FOB Qingdao",prod:100,insp:"Passed",inspDate:"",cargoReady:"ETD 14 Jul",eta:"19 Aug",port:"Paranaguá",stage:"In Transit"}
+  ];
+  d.neg=[
+    {id:uid(),ref:"NEG-04",topic:"Kraft mailer boxes — new SKU",next:"send FOB quote",owner:"Desk",due:"08 Aug",value:120000,stage:"Inquiry",outcome:"Open",samples:"Pending"},
+    {id:uid(),ref:"NEG-03",topic:"Cornstarch cutlery — volume tier",next:"align target price",owner:"Client",due:"11 Aug",value:260000,stage:"Proposal",outcome:"Open",samples:"Approved"},
+    {id:uid(),ref:"NEG-02",topic:"Bamboo stirrers — H2 re-price",next:"counter w/ 2 factories",owner:"Desk",due:"07 Aug",value:150000,stage:"Proposal",outcome:"Open",samples:"Delivered"},
+    {id:uid(),ref:"NEG-01",topic:"Annual paper-cup framework",next:"draft agreement",owner:"Desk",due:"14 Aug",value:520000,stage:"Proposal",outcome:"Open",samples:"Approved"},
+    {id:uid(),ref:"NEG-99",topic:"Sugarcane trays — spot deal",next:"— converted to PO-0144",owner:"Desk",due:"—",value:46700,stage:"Proposal",outcome:"Won",samples:"Approved",wonPo:"seeded"},
+    {id:uid(),ref:"NEG-98",topic:"Wooden forks — bulk trial",next:"— price not competitive",owner:"Desk",due:"—",value:60000,stage:"Inquiry",outcome:"Lost",samples:"Rejected"}
+  ];
+  d.act=[
+    {id:uid(),type:"red",text:"PO-0146 — QC window is tight. Confirm inspection booking by 08 Aug to protect 15 Aug cargo-ready date.",owner:"Trading Desk"},
+    {id:uid(),type:"client",text:"PO-0145 — cargo ready 06 Aug. Awaiting booking confirmation & shipping instructions from client.",owner:"Client"},
+    {id:uid(),type:"blue",text:"PO-0143 — loaded 02 Aug; vessel booked, ETD confirmed 08 Sep to Santos.",owner:"Trading Desk"},
+    {id:uid(),type:"gold",text:"PO-0151 — deposit received 01 Aug; production start pending material colour approval.",owner:"Factory / Client"},
+    {id:uid(),type:"grn",text:"NEG-01 — client requested payment-terms review (30/70 → LC at sight) before signing.",owner:"Trading Desk"}
+  ];
+  d.closed=[
+    {id:uid(),code:"PO-2026-0138",ndr:"NDR-2588",product:"Bagasse bowls",value:58900,delivered:"28 Jul",port:"Santos"},
+    {id:uid(),code:"PO-2026-0135",ndr:"NDR-2585",product:"Paper cups 16oz",value:84300,delivered:"15 Jul",port:"Itajaí"}
+  ];return d;}
+function andes(){const d=blankData("Andes Importações S.A.");d.meta.period="July 2026";d.meta.issued="05 Aug 2026";d.meta.reportNo="AND·ASR·2026-07";d.meta.tradeLane="China → Chile (CL)";
+  d.pos=[
+    {id:uid(),code:"PO-2026-0207",ndr:"NDR-2610",product:"PET clamshells",qty:"2×40′HC",value:64800,incoterm:"FOB Ningbo",prod:35,insp:"Pending",inspDate:"",cargoReady:"20 Sep",eta:"28 Oct",port:"San Antonio",stage:"In Production"},
+    {id:uid(),code:"PO-2026-0205",ndr:"NDR-2611",product:"Aluminium foil trays",qty:"1×40′HC",value:47500,incoterm:"FOB Qingdao",prod:100,insp:"Passed",inspDate:"",cargoReady:"Loaded 03 Aug",eta:"09 Sep",port:"San Antonio",stage:"Loaded"}
+  ];
+  d.neg=[{id:uid(),ref:"NEG-11",topic:"Compostable cups — trial order",next:"send samples",owner:"Desk",due:"12 Aug",value:90000,stage:"Inquiry",outcome:"Open",samples:"Requested"}];
+  d.closed=[{id:uid(),code:"PO-2026-0198",ndr:"NDR-2580",product:"Kraft bags",value:39900,delivered:"22 Jul",port:"Valparaíso"}];return d;}
+function seedStore(){const c1={id:uid(),data:ventoSul()},c2={id:uid(),data:andes()};return {activeClientId:c1.id,clients:[c1,c2],logo:null,settings:{deliveredMode:"Hidden"}};}
+
+let store=seedStore(),data;
+function useActive(){const c=store.clients.find(c=>c.id===store.activeClientId)||store.clients[0];store.activeClientId=c.id;data=c.data;}
+async function save(){try{if(window.storage&&window.storage.set)await window.storage.set(KEY,JSON.stringify(store));}catch(e){}const t=document.getElementById("savedTag");t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1100);}
+async function load(){try{if(window.storage&&window.storage.get){const r=await window.storage.get(KEY);if(r&&r.value)return JSON.parse(r.value);}}catch(e){}return null;}
+function normalize(d){d.meta=d.meta||{};d.kpi=d.kpi||{};["pos","neg","act","closed"].forEach(k=>d[k]=d[k]||[]);
+  d.pos.forEach(p=>{if(p.insp===undefined){const q=p.qc||"pending";p.insp=q==="passed"?"Passed":q==="pending"?"Pending":"Booked";p.inspDate=(p.insp==="Booked"&&p.qcLabel)?String(p.qcLabel).replace(/^[A-Za-z ]*/,"").trim():"";}if(p.inspDate===undefined)p.inspDate="";if(p.ndr===undefined)p.ndr="";if(p.stage==="Booked/Loaded")p.stage="Loaded";if(p.stage==="Delivered / Closed")p.stage="Arrived";delete p.qc;delete p.qcLabel;});
+  d.neg.forEach(n=>{if(n.outcome===undefined)n.outcome="Open";if(n.samples===undefined)n.samples="N/A";if(n.stage==="Quotation")n.stage="Inquiry";if(n.stage==="Negotiation")n.stage="Proposal";});
+  d.closed.forEach(c=>{if(c.value==null)c.value=0;if(c.ndr===undefined)c.ndr="";});return d;}
+function migrateStore(obj){if(obj&&Array.isArray(obj.clients)){if(obj.logo===undefined)obj.logo=null;if(!obj.settings)obj.settings={deliveredMode:"Hidden"};if(!obj.settings.deliveredMode)obj.settings.deliveredMode="Hidden";obj.clients.forEach(c=>{c.id=c.id||uid();normalize(c.data);});if(!obj.clients.find(c=>c.id===obj.activeClientId))obj.activeClientId=obj.clients[0].id;return obj;}
+  if(obj&&Array.isArray(obj.pos))return {activeClientId:"m",clients:[{id:"m",data:normalize(obj)}],logo:null,settings:{deliveredMode:"Hidden"}};return null;}
+
+function esc(s){return (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function money(v){v=Number(v)||0;return v>=1e6?(v/1e6).toFixed(2)+"M":(v/1e3).toFixed(1)+"K";}
+function boldCodes(s){return esc(s).replace(/\b(PO-\d{4}(?:-\d{4})?|NEG-\d+|NDR-\d+)\b/g,"<b>$1</b>");}
+function shortCode(c){if(!c)return "NEW";const m=String(c).match(/(\d{4})\s*$/);return m?"PO-"+m[1]:esc(c);}
+function pillClass(st){return {"Confirmed":"p-conf","In Production":"p-prod","Inspection":"p-insp","Cargo Ready":"p-ready","Booked":"p-book","Loaded":"p-load","In Transit":"p-transit","Arrived":"p-ready"}[st]||"p-conf";}
+function stageStop(st){return {"Confirmed":"PO Confirmed","In Production":"Production","Inspection":"Inspection","Cargo Ready":"Cargo Ready","Booked":"Booked","Loaded":"Loaded","In Transit":"In Transit","Arrived":"Arrived"}[st];}
+function negStop(st){return st;}
+function chipCls(st){if(["Cargo Ready","Booked","Loaded","In Transit","Arrived"].includes(st))return"b";if(["In Production","Inspection"].includes(st))return"g";return"";}
+function inspCell(p){const map={Pending:["na","Pending"],Booked:["due","Booked"+(p.inspDate?" "+p.inspDate:"")],Concluded:["due","Concluded"],Passed:["pass","Passed"]};const x=map[p.insp]||map.Pending;return `<span class="qc ${x[0]}"><span class="d"></span>${esc(x[1])}</span>`;}
+function sampleTag(s){const m={"N/A":["smp-na","N/A"],"Requested":["smp-req","Requested"],"Pending":["smp-pend","Pending"],"Delivered":["smp-deliv","Delivered"],"Approved":["smp-appr","Approved"],"Rejected":["smp-rej","Rejected"]};const x=m[s]||m["N/A"];return '<span class="smp '+x[0]+'">'+x[1]+'</span>';}
+function codeOf(name){const w=(name||"").replace(/[^A-Za-z ]/g,"").trim().split(/\s+/);let c=(w[0]?w[0][0]:"")+(w[1]?w[1][0]:(w[0]&&w[0][1]?w[0][1]:""));return (c||"C").toUpperCase();}
+function count(stage){return data.pos.filter(p=>p.stage===stage).length;}
+function sumStage(stage){return data.pos.filter(p=>p.stage===stage).reduce((a,p)=>a+(Number(p.value)||0),0);}
+
+function renderReport(){if(reportMode==="all"){renderConsolidated();return;}
+  const m=data.meta,k=data.kpi;
+  const openNegs=data.neg.filter(n=>n.outcome==="Open");
+  const openVal=data.pos.reduce((a,p)=>a+(Number(p.value)||0),0);
+  const negVal=openNegs.reduce((a,n)=>a+(Number(n.value)||0),0);
+  const closedVal=data.closed.reduce((a,c)=>a+(Number(c.value)||0),0);
+  const dmode=(store.settings&&store.settings.deliveredMode)||"Hidden";
+  const buckets={};STOPS.forEach(s=>buckets[s]=[]);
+  openNegs.forEach(n=>{const s=negStop(n.stage);if(buckets[s])buckets[s].push({t:n.ref,c:"g"});});
+  data.pos.forEach(p=>{const s=stageStop(p.stage);if(buckets[s])buckets[s].push({t:shortCode(p.code),c:chipCls(p.stage)});});
+  if(dmode==="Listed")data.closed.forEach(c=>buckets["Delivered"].push({t:shortCode(c.code),c:"n"}));
+  else if(dmode==="Count"&&data.closed.length)buckets["Delivered"].push({t:data.closed.length+" closed",c:"n"});
+  let lastIdx=0;STOPS.forEach((s,i)=>{if(buckets[s].length)lastIdx=i;});
+  const inProd=new Set(data.pos.filter(p=>p.stage==="In Production").map(p=>stageStop(p.stage)));
+  const stopsHtml=STOPS.map((s,i)=>{const reached=i<=lastIdx,active=inProd.has(s);const chips=buckets[s].map(ch=>`<span class="chip ${ch.c}">${esc(ch.t)}</span>`).join("");
+    return `<div class="stop ${active?"active ":""}${reached?"reached":""}"><div class="dot"></div><div class="s-lab">${esc(s)}</div><div class="chips">${chips}</div></div>`;}).join("");
+  const kpi=(cls,label,val,foot)=>`<div class="kpi ${cls}"><div class="k-label">${label}</div><div class="k-val tabnum">${val}</div><div class="k-foot">${foot}</div></div>`;
+  const kpisHtml=[
+    kpi("","In Negotiation",`<small>US$</small> ${money(negVal)}`,`${openNegs.length} open topics`),
+    kpi("nav","Active POs",`${data.pos.length}`,boldCodes(k.activeFoot||"")),
+    kpi("","Open Order Value",`<small>US$</small> ${money(openVal)}`,`across ${data.pos.length} POs`),
+    kpi("nav","In Production",`${count("In Production")}`,`US$ ${money(sumStage("In Production"))}`),
+    kpi("nav","Cargo Ready",`${count("Cargo Ready")}`,`US$ ${money(sumStage("Cargo Ready"))}`),
+    kpi("","In Transit",`${count("In Transit")}`,esc(k.transitFoot||"")),
+    kpi("grn","Delivered POs",`${data.closed.length}`,""),
+    kpi("grn","Closed Order Value",`<small>US$</small> ${money(closedVal)}`,`realised revenue`)
+  ].join("");
+  const opsRows=data.pos.map(p=>`<tr>
+    <td class="po">${p.code?esc(p.code):'<span class="addpo">add PO#</span>'}</td><td class="ndr">${esc(p.ndr||"—")}</td>
+    <td class="prod">${esc(p.product)}</td><td class="num">${esc(p.qty)}</td><td class="val">${(Number(p.value)||0).toLocaleString("en-US")}</td>
+    <td class="ic">${esc(p.incoterm)}</td>
+    <td><span class="bar"><i style="width:${Math.max(0,Math.min(100,Number(p.prod)||0))}%"></i></span><span class="barlab">${Number(p.prod)||0}%</span></td>
+    <td class="ic">${esc(p.cargoReady)}</td><td>${inspCell(p)}</td><td class="ic">${esc(p.eta)} · ${esc(p.port)}</td>
+    <td><span class="pill ${pillClass(p.stage)}">${esc(p.stage)}</span></td></tr>`).join("");
+  const negRows=openNegs.map(n=>{const sc={Proposal:"st-p",Inquiry:"st-i"}[n.stage]||"st-i";
+    return `<tr><td class="ref">${esc(n.ref)}</td><td class="topic">${esc(n.topic)}</td><td>${sampleTag(n.samples)}</td><td class="nextcol">${esc(n.next)}</td><td class="ic">${esc(n.owner)}</td><td class="ic">${esc(n.due)}</td><td class="val">${money(n.value)}</td><td><span class="stage-tag ${sc}">${esc(n.stage)}</span></td></tr>`;}).join("");
+  const actRows=data.act.map(a=>`<div class="act-row"><div class="tag t-${a.type}">${ACT_SYM[a.type]||"◆"}</div><div>${boldCodes(a.text)} <span class="who">Owner: ${esc(a.owner)}</span></div></div>`).join("");
+  const actLegend=ACT_TYPES.map(t=>`<span class="l"><i class="t-${t[0]}"></i> ${t[1]}</span>`).join("");
+  const markHtml=store.logo?`<div class="mark haslogo"><img src="${store.logo}" alt="logo"></div>`:`<div class="mark"><span>${esc(m.company)}</span></div>`;
+  document.getElementById("reportRoot").innerHTML=`
+  <div class="sheet">
+    <header class="r-masthead"><div class="brand">${markHtml}<div class="brand-txt"><div class="eyebrow">Client Account Intelligence</div><h2>${esc(m.title)}</h2><div class="sub">Commercial &amp; operational tracking</div></div></div>
+      <dl class="meta"><dt>Client</dt><dd>${esc(m.client)}</dd><dt>Account Manager</dt><dd>${esc(m.accountManager)}</dd><dt>Reporting Period</dt><dd>${esc(m.period)}</dd><dt>Issued</dt><dd class="accent">${esc(m.issued)}</dd><dt>Report No.</dt><dd class="mono">${esc(m.reportNo)}</dd><dt>Trade Lane</dt><dd>${esc(m.tradeLane)}</dd></dl></header>
+    <section class="kpis">${kpisHtml}</section>
+    <div class="sec-h"><span class="n">01</span><h3>Deal Journey — Live Position</h3><span class="rule"></span><span class="aside">Each reference plotted at its current lifecycle stage</span></div>
+    <section class="journey"><div class="stops" style="grid-template-columns:repeat(${STOPS.length},1fr)">${stopsHtml}</div><div class="journey-legend"><span class="lg"><i style="background:#D9B24A"></i> Commercial / factory</span><span class="lg"><i style="background:#3C5C7A"></i> Logistics</span><span class="lg"><i style="background:#2E7D57"></i> Closed</span></div></section>
+    <div class="sec-h"><span class="n">02</span><h3>Confirmed Orders &amp; Operations</h3><span class="rule"></span><span class="aside">${data.pos.length} active · US$ ${money(openVal)}</span></div>
+    <table class="ops"><thead><tr><th>Client PO</th><th>NDR ref</th><th>Product</th><th class="num">Qty / Vol</th><th class="num">Value US$</th><th>Incoterm</th><th>Production</th><th>Cargo Ready</th><th>Inspection</th><th>ETA (Port)</th><th>Status</th></tr></thead><tbody>${opsRows||`<tr><td colspan="11" class="ic" style="padding:12px;text-align:center">No active purchase orders</td></tr>`}</tbody></table>
+    <div class="sec-h"><span class="n">03</span><h3>Commercial Pipeline</h3><span class="rule"></span><span class="aside">${openNegs.length} open · US$ ${money(negVal)}</span></div>
+    <table class="neg"><thead><tr><th>Ref</th><th>Topic / Product</th><th>Samples</th><th>Next action</th><th>Owner</th><th>Due</th><th class="num">Est. US$</th><th>Stage</th></tr></thead><tbody>${negRows||`<tr><td colspan="8" class="ic" style="padding:10px;text-align:center">No open topics</td></tr>`}</tbody></table>
+    <div class="sec-h"><span class="n">04</span><h3>Action Items &amp; Alerts</h3><span class="rule"></span></div>
+    <div class="actblock"><div class="mini-title">Open items <span class="cnt">${data.act.length} open</span></div><div class="act-legend">${actLegend}</div><div class="actions">${actRows||`<div class="act-row"><div>No open actions.</div></div>`}</div></div>
+    <footer class="r-foot"><div class="conf">Confidential — prepared exclusively for ${esc(m.client)}</div><div class="who">Prepared by <b>${esc(m.preparedBy)}</b> · ${esc(m.contact)}</div></footer>
+  </div>`;
+  fitReport();
+}
+
+function renderConsolidated(){
+  const cs=store.clients.map((c,i)=>({id:c.id,name:c.data.meta.client,code:codeOf(c.data.meta.client),color:PALETTE[i%PALETTE.length],d:c.data}));
+  let POS=[],NEG=[],ACT=[];
+  cs.forEach(c=>{c.d.pos.forEach(p=>POS.push([p,c]));c.d.neg.filter(n=>n.outcome==="Open").forEach(n=>NEG.push([n,c]));c.d.act.forEach(a=>ACT.push([a,c]));});
+  const openVal=POS.reduce((a,x)=>a+(+x[0].value||0),0);
+  const negVal=NEG.reduce((a,x)=>a+(+x[0].value||0),0);
+  const closedVal=cs.reduce((a,c)=>a+c.d.closed.reduce((s,x)=>s+(+x.value||0),0),0);
+  const closedCount=cs.reduce((a,c)=>a+c.d.closed.length,0);
+  const cnt=st=>POS.filter(x=>x[0].stage===st).length;
+  const sumSt=st=>POS.filter(x=>x[0].stage===st).reduce((a,x)=>a+(+x[0].value||0),0);
+  const dmode=(store.settings&&store.settings.deliveredMode)||"Hidden";
+  const buckets={};STOPS.forEach(s=>buckets[s]=[]);
+  NEG.forEach(x=>{const s=negStop(x[0].stage);if(buckets[s])buckets[s].push({t:x[0].ref,col:x[1].color});});
+  POS.forEach(x=>{const s=stageStop(x[0].stage);if(buckets[s])buckets[s].push({t:shortCode(x[0].code),col:x[1].color});});
+  if(dmode==="Count"&&closedCount)buckets["Delivered"].push({t:closedCount+" closed",col:"#2E7D57"});
+  else if(dmode==="Listed")cs.forEach(c=>c.d.closed.forEach(z=>buckets["Delivered"].push({t:shortCode(z.code),col:c.color})));
+  let lastIdx=0;STOPS.forEach((s,i)=>{if(buckets[s].length)lastIdx=i;});
+  const inProd=new Set(POS.filter(x=>x[0].stage==="In Production").map(x=>stageStop(x[0].stage)));
+  const stopsHtml=STOPS.map((s,i)=>{const reached=i<=lastIdx,active=inProd.has(s);const chips=buckets[s].map(ch=>`<span class="chip" style="border-color:${ch.col}"><i style="background:${ch.col}"></i>${esc(ch.t)}</span>`).join("");
+    return `<div class="stop ${active?"active ":""}${reached?"reached":""}"><div class="dot"></div><div class="s-lab">${esc(s)}</div><div class="chips">${chips}</div></div>`;}).join("");
+  const kpi=(cls,label,val,foot)=>`<div class="kpi ${cls}"><div class="k-label">${label}</div><div class="k-val tabnum">${val}</div><div class="k-foot">${foot}</div></div>`;
+  const kpisHtml=[
+    kpi("","In Negotiation",`<small>US$</small> ${money(negVal)}`,`${NEG.length} open topics`),
+    kpi("nav","Active POs",`${POS.length}`,`${cs.length} clients`),
+    kpi("","Open Order Value",`<small>US$</small> ${money(openVal)}`,`portfolio order book`),
+    kpi("nav","In Production",`${cnt("In Production")}`,`US$ ${money(sumSt("In Production"))}`),
+    kpi("nav","Cargo Ready",`${cnt("Cargo Ready")}`,`US$ ${money(sumSt("Cargo Ready"))}`),
+    kpi("","In Transit",`${cnt("In Transit")}`,`shipments moving`),
+    kpi("grn","Delivered POs",`${closedCount}`,""),
+    kpi("grn","Closed Order Value",`<small>US$</small> ${money(closedVal)}`,`realised revenue`)
+  ].join("");
+  const roster=cs.map(c=>`<span class="r"><i style="background:${c.color}"></i><b>${esc(c.code)}</b> ${esc(c.name)}</span>`).join("");
+  const opsRows=POS.map(x=>{const p=x[0],c=x[1];return `<tr>
+    <td><span class="ccode" style="background:${c.color}">${esc(c.code)}</span></td>
+    <td class="po">${p.code?esc(p.code):'<span class="addpo">add PO#</span>'}</td><td class="ndr">${esc(p.ndr||"—")}</td>
+    <td class="prod">${esc(p.product)}</td><td class="num">${esc(p.qty)}</td><td class="val">${(+p.value||0).toLocaleString("en-US")}</td>
+    <td class="ic">${esc(p.incoterm)}</td><td class="ic">${esc(p.cargoReady)}</td><td>${inspCell(p)}</td>
+    <td class="ic">${esc(p.eta)}${p.port?" · "+esc(p.port):""}</td><td><span class="pill ${pillClass(p.stage)}">${esc(p.stage)}</span></td></tr>`;}).join("");
+  const negRows=NEG.map(x=>{const n=x[0],c=x[1];const sc={Proposal:"st-p",Inquiry:"st-i"}[n.stage]||"st-i";
+    return `<tr><td><span class="ccode" style="background:${c.color}">${esc(c.code)}</span></td><td class="ref">${esc(n.ref)}</td><td class="topic">${esc(n.topic)}</td><td>${sampleTag(n.samples)}</td><td class="ic">${esc(n.owner)}</td><td class="ic">${esc(n.due)}</td><td class="val">${money(n.value)}</td><td><span class="stage-tag ${sc}">${esc(n.stage)}</span></td></tr>`;}).join("");
+  const actRows=ACT.map(x=>{const a=x[0],c=x[1];return `<div class="act-row"><div class="tag t-${a.type}">${ACT_SYM[a.type]||"◆"}</div><div><span class="ccode" style="background:${c.color};margin-right:5px">${esc(c.code)}</span>${boldCodes(a.text)} <span class="who">Owner: ${esc(a.owner)}</span></div></div>`;}).join("");
+  const actLegend=ACT_TYPES.map(t=>`<span class="l"><i class="t-${t[0]}"></i> ${t[1]}</span>`).join("");
+  const fc=cs.map(c=>{const realised=c.d.closed.reduce((a,z)=>a+(+z.value||0),0);const orderbook=c.d.pos.reduce((a,p)=>a+(+p.value||0),0);const weighted=c.d.neg.filter(n=>n.outcome==="Open").reduce((a,n)=>a+(+n.value||0)*(PROB[n.stage]||0),0);return {c,realised,orderbook,weighted,proj:realised+orderbook+weighted};});
+  const tR=fc.reduce((a,r)=>a+r.realised,0),tO=fc.reduce((a,r)=>a+r.orderbook,0),tW=fc.reduce((a,r)=>a+r.weighted,0),tP=tR+tO+tW;
+  const rnd=v=>Math.round(v).toLocaleString("en-US");
+  const fcRows=fc.map(r=>`<tr><td><span class="ccode" style="background:${r.c.color}">${esc(r.c.code)}</span> ${esc(r.c.name)}</td><td class="val">${rnd(r.realised)}</td><td class="val">${rnd(r.orderbook)}</td><td class="val">${rnd(r.weighted)}</td><td class="val">${rnd(r.proj)}</td></tr>`).join("")
+    +`<tr style="background:#FBF3DE"><td class="prod">Portfolio total</td><td class="val">${rnd(tR)}</td><td class="val">${rnd(tO)}</td><td class="val">${rnd(tW)}</td><td class="val">${rnd(tP)}</td></tr>`;
+  const today=new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+  const markHtml=store.logo?`<div class="mark haslogo"><img src="${store.logo}" alt="logo"></div>`:`<div class="mark"><span>YOUR LOGO</span></div>`;
+  document.getElementById("reportRoot").innerHTML=`
+  <div class="sheet">
+    <header class="r-masthead"><div class="brand">${markHtml}<div class="brand-txt"><div class="eyebrow">Portfolio Intelligence</div><h2>Consolidated Business Overview</h2><div class="sub">All clients — commercial &amp; operational tracking</div></div></div>
+      <dl class="meta"><dt>Scope</dt><dd>All clients (${cs.length})</dd><dt>Account Manager</dt><dd>Trading Desk</dd><dt>Snapshot</dt><dd class="accent">${today}</dd><dt>Report No.</dt><dd class="mono">PORTFOLIO</dd><dt>Trade Lanes</dt><dd>China → LATAM</dd></dl></header>
+    <section class="kpis">${kpisHtml}</section>
+    <div class="roster"><span class="rlab">Clients included</span>${roster}</div>
+    <div class="sec-h"><span class="n">01</span><h3>Deal Journey — All Clients</h3><span class="rule"></span><span class="aside">Every live reference across the portfolio · dot colour = client</span></div>
+    <section class="journey"><div class="stops" style="grid-template-columns:repeat(${STOPS.length},1fr)">${stopsHtml}</div><div class="journey-legend"><span class="lg"><i style="background:#D9B24A"></i> Commercial / factory</span><span class="lg"><i style="background:#3C5C7A"></i> Logistics</span><span class="lg"><i style="background:#2E7D57"></i> Closed</span></div></section>
+    <div class="sec-h"><span class="n">02</span><h3>Confirmed Orders &amp; Operations — All Clients</h3><span class="rule"></span><span class="aside">${POS.length} active · US$ ${money(openVal)}</span></div>
+    <table class="ops"><thead><tr><th>Client</th><th>Client PO</th><th>NDR ref</th><th>Product</th><th class="num">Qty / Vol</th><th class="num">Value US$</th><th>Incoterm</th><th>Cargo Ready</th><th>Inspection</th><th>ETA (Port)</th><th>Status</th></tr></thead><tbody>${opsRows||`<tr><td colspan="11" class="ic" style="padding:12px;text-align:center">No active orders</td></tr>`}</tbody></table>
+    <div class="sec-h"><span class="n">03</span><h3>Commercial Pipeline — All Clients</h3><span class="rule"></span><span class="aside">${NEG.length} open · US$ ${money(negVal)}</span></div>
+    <table class="neg"><thead><tr><th>Client</th><th>Ref</th><th>Topic / Product</th><th>Samples</th><th>Owner</th><th>Due</th><th class="num">Est. US$</th><th>Stage</th></tr></thead><tbody>${negRows||`<tr><td colspan="8" class="ic" style="padding:10px;text-align:center">No open topics</td></tr>`}</tbody></table>
+    <div class="sec-h"><span class="n">04</span><h3>Action Items &amp; Alerts — All Clients</h3><span class="rule"></span></div>
+    <div class="actblock"><div class="mini-title">Open items <span class="cnt">${ACT.length} open</span></div><div class="act-legend">${actLegend}</div><div class="actions">${actRows||`<div class="act-row"><div>No open actions.</div></div>`}</div></div>
+    <div class="sec-h"><span class="n">05</span><h3>Business Forecast</h3><span class="rule"></span><span class="aside">Projected revenue · US$ ${money(tP)}</span></div>
+    <table class="ops"><thead><tr><th>Client</th><th class="num">Realised (closed)</th><th class="num">Order book (active)</th><th class="num">Weighted pipeline</th><th class="num">Projected revenue</th></tr></thead><tbody>${fcRows}</tbody></table>
+    <div class="fcnote">Weighted pipeline applies close-probabilities by stage — Inquiry 25% · Proposal 70% (Won deals already sit in the order book). Projected = realised + order book + weighted pipeline. Indicative planning figure, not a commitment.</div>
+    <footer class="r-foot"><div class="conf">Confidential — internal business overview · all clients</div><div class="who">Prepared by <b>Trading Desk</b> · ${today}</div></footer>
+  </div>`;
+  fitReport();
+}
+
+function fitReport(){const vp=document.getElementById("reportViewport"),sc=document.getElementById("reportScale"),sheet=sc.querySelector(".sheet");if(!sheet)return;
+  const avail=vp.clientWidth-4,W=1122.5,scale=Math.min(1,avail/W);sc.style.transform="scale("+scale+")";const h=sheet.getBoundingClientRect().height;sc.style.height=h+"px";
+  const pages=Math.max(1,Math.ceil(h/(793.7*scale)));document.getElementById("pageTag").textContent=pages+(pages>1?" pages":" page");}
+
+function field(entity,id,name,label,val,opts){const v=esc(val==null?"":val);
+  if(opts){const o=opts.map(x=>`<option ${x===val?"selected":""}>${esc(x)}</option>`).join("");return `<div class="f"><label>${label}</label><select data-entity="${entity}" data-id="${id}" data-field="${name}">${o}</select></div>`;}
+  return `<div class="f"><label>${label}</label><input data-entity="${entity}" data-id="${id}" data-field="${name}" value="${v}"></div>`;}
+function area(entity,id,name,label,val){return `<div class="f wide"><label>${label}</label><textarea data-entity="${entity}" data-id="${id}" data-field="${name}">${esc(val||"")}</textarea></div>`;}
+
+function renderManage(){
+  document.getElementById("list-pos").innerHTML=data.pos.map((p,i)=>{const dateF=p.insp==="Booked"?field("pos",p.id,"inspDate","Inspection booked date",p.inspDate):"";
+    return `<div class="mcard"><div class="ttl"><span class="idx">${i+1}</span><span class="name">${esc(p.code||"Draft PO — add number")}</span><div class="ttl-actions"><button class="deliver" data-deliver="${p.id}">✓ Mark delivered</button><button class="del" data-del="pos" data-id="${p.id}">Delete</button></div></div>
+      <div class="grid">${field("pos",p.id,"code","Client PO number",p.code)}${field("pos",p.id,"ndr","NDR ref (Nandera)",p.ndr)}${field("pos",p.id,"product","Product",p.product)}${field("pos",p.id,"qty","Qty / Volume",p.qty)}${field("pos",p.id,"value","Value (US$)",p.value)}${field("pos",p.id,"incoterm","Incoterm",p.incoterm)}${field("pos",p.id,"prod","Production %",p.prod)}${field("pos",p.id,"insp","Inspection status",p.insp,INSP_STATES)}${dateF}${field("pos",p.id,"cargoReady","Cargo ready / ETD",p.cargoReady)}${field("pos",p.id,"eta","ETA",p.eta)}${field("pos",p.id,"port","Destination port",p.port)}${field("pos",p.id,"stage","Stage",p.stage,POS_STAGES)}</div></div>`;}).join("")||`<div class="hint">No purchase orders yet.</div>`;
+  document.getElementById("list-neg").innerHTML=data.neg.map((n,i)=>`
+    <div class="mcard"><div class="ttl"><span class="idx">${i+1}</span><span class="name">${esc(n.ref||"New topic")}</span><span class="tagoc oc-${n.outcome||"Open"}">${esc(n.outcome||"Open")}</span><button class="del" data-del="neg" data-id="${n.id}">Delete</button></div>
+      <div class="grid">${field("neg",n.id,"ref","Reference",n.ref)}${field("neg",n.id,"value","Est. value (US$)",n.value)}${field("neg",n.id,"stage","Stage",n.stage,NEG_STAGES)}${field("neg",n.id,"outcome","Outcome",n.outcome||"Open",NEG_OUTCOMES)}${field("neg",n.id,"samples","Sample status",n.samples||"N/A",NEG_SAMPLES)}${field("neg",n.id,"topic","Topic / product",n.topic)}${field("neg",n.id,"next","Next action",n.next)}${field("neg",n.id,"owner","Owner",n.owner)}${field("neg",n.id,"due","Due",n.due)}</div></div>`).join("")||`<div class="hint">No topics yet.</div>`;
+  document.getElementById("list-act").innerHTML=data.act.map((a,i)=>`
+    <div class="mcard"><div class="ttl"><span class="idx">${i+1}</span><span class="name">Alert</span><button class="del" data-del="act" data-id="${a.id}">Delete</button></div>
+      <div class="grid"><div class="f"><label>Type</label><select data-entity="act" data-id="${a.id}" data-field="type">${ACT_TYPES.map(t=>`<option value="${t[0]}" ${t[0]===a.type?"selected":""}>${t[1]}</option>`).join("")}</select></div>${field("act",a.id,"owner","Owner",a.owner)}${area("act",a.id,"text","Message",a.text)}</div></div>`).join("")||`<div class="hint">No action items.</div>`;
+  document.getElementById("list-cl").innerHTML=data.closed.map((c,i)=>`
+    <div class="mcard"><div class="ttl"><span class="idx">${i+1}</span><span class="name">${esc(c.code||"Closed")}</span><button class="del" data-del="closed" data-id="${c.id}">Delete</button></div>
+      <div class="grid">${field("closed",c.id,"code","Client PO number",c.code)}${field("closed",c.id,"ndr","NDR ref (Nandera)",c.ndr)}${field("closed",c.id,"product","Product",c.product)}${field("closed",c.id,"value","Value (US$)",c.value)}${field("closed",c.id,"delivered","Delivered",c.delivered)}${field("closed",c.id,"port","Port",c.port)}</div></div>`).join("")||`<div class="hint">Nothing closed yet.</div>`;
+  renderSettings();renderOverview();
+  document.getElementById("b-pos").textContent=data.pos.length;document.getElementById("b-neg").textContent=data.neg.length;
+  document.getElementById("b-act").textContent=data.act.length;document.getElementById("b-cl").textContent=data.closed.length;
+  document.getElementById("c-pos").textContent=data.pos.length+" order(s)";document.getElementById("c-neg").textContent=data.neg.length+" topic(s)";
+  document.getElementById("c-act").textContent=data.act.length+" item(s)";document.getElementById("c-cl").textContent=data.closed.length+" deal(s)";
+}
+function renderSettings(){const m=data.meta,k=data.kpi;const dm=(store.settings&&store.settings.deliveredMode)||"Hidden";
+  const logoPrev=store.logo?`<img src="${store.logo}" alt="logo">`:`<div class="ph">No logo yet</div>`;
+  document.getElementById("list-settings").innerHTML=`
+    <div class="mcard"><div class="ttl"><span class="idx">§</span><span class="name">Report header</span></div>
+      <div class="grid">${field("meta","_","company","Logo caption (used if no image)",m.company)}${field("meta","_","title","Report title",m.title)}${field("meta","_","client","Client",m.client)}${field("meta","_","accountManager","Account manager",m.accountManager)}${field("meta","_","period","Reporting period",m.period)}${field("meta","_","issued","Issued date",m.issued)}${field("meta","_","reportNo","Report no.",m.reportNo)}${field("meta","_","tradeLane","Trade lane",m.tradeLane)}${field("meta","_","preparedBy","Prepared by",m.preparedBy)}${field("meta","_","contact","Contact",m.contact)}</div>
+      <div class="hint">Renaming the Client here also renames it in the client switcher.</div></div>
+    <div class="mcard"><div class="ttl"><span class="idx">◆</span><span class="name">Logo image <span style="font-weight:400;color:var(--muted);font-size:11px">(applies to all clients &amp; the consolidated report)</span></span></div>
+      <div class="logobox"><div class="logopreview">${logoPrev}</div><div><button class="add-btn" data-action="logo-upload" style="padding:9px 16px;width:auto">↥ Upload logo image</button>${store.logo?`<button class="add-btn" data-action="logo-remove" style="padding:9px 16px;width:auto;margin-top:8px;border-color:#e6c9c4;color:var(--act)">Remove logo</button>`:""}<div class="hint">PNG/JPG. Auto-resized and framed inside the header mark.</div></div></div></div>
+    <div class="mcard"><div class="ttl"><span class="idx">↦</span><span class="name">Deal Journey — delivered deals <span style="font-weight:400;color:var(--muted);font-size:11px">(applies to all clients)</span></span></div>
+      <div class="grid"><div class="f"><label>Show delivered POs on the journey</label><select data-entity="opt" data-id="_" data-field="deliveredMode">${DELIVERED_MODES.map(x=>`<option ${x===dm?"selected":""}>${x}</option>`).join("")}</select></div></div>
+      <div class="hint"><b>Hidden</b> — delivered deals drop off the journey. <b>Count</b> — a single "N closed" tag. <b>Listed</b> — every delivered PO plotted.</div></div>
+    <div class="mcard"><div class="ttl"><span class="idx">%</span><span class="name">KPI footnotes</span></div>
+      <div class="grid">${field("kpi","_","activeFoot","Active POs — footnote",k.activeFoot)}${field("kpi","_","transitFoot","In Transit — footnote",k.transitFoot)}</div></div>
+    <div class="mcard"><div class="ttl"><span class="idx">⟲</span><span class="name">Data</span></div>
+      <div class="grid"><div class="f"><label>&nbsp;</label><button class="add-btn" data-action="export" style="padding:9px">↧ Backup (download JSON)</button></div><div class="f"><label>&nbsp;</label><button class="add-btn" data-action="import" style="padding:9px">↥ Import (restore JSON)</button></div><div class="f"><label>&nbsp;</label><button class="add-btn" data-action="reset" style="padding:9px;border-color:#e6c9c4;color:var(--act)">↺ Reset to sample data</button></div></div>
+      <div class="datalegend"><h4>How to manage your data — the three buttons</h4>
+        <div class="dlrow"><span class="dlk b1">↧ Backup</span><div><b>Saves everything to one file.</b> Downloads a single JSON with <b>all clients</b> — your master register. Keep it in your drive and back up after each session.</div></div>
+        <div class="dlrow"><span class="dlk b2">↥ Import</span><div><b>Loads a backup file back in.</b> <b>Replaces</b> everything in the tool. Use it to restore, or to move to another device or browser.</div></div>
+        <div class="dlrow"><span class="dlk b3">↺ Reset</span><div><b>Wipes everything and reloads the sample</b> — <b>back up first</b>, current entries can't be recovered.</div></div>
+      </div></div>`;
+}
+function renderOverview(){
+  const sel=(ent,id,f,opts,cur)=>`<select class="mini" data-entity="${ent}" data-id="${id}" data-field="${f}">${opts.map(x=>`<option ${x===cur?"selected":""}>${esc(x)}</option>`).join("")}</select>`;
+  const inp=(ent,id,f,v)=>`<input class="mini" data-entity="${ent}" data-id="${id}" data-field="${f}" value="${esc(v==null?"":v)}">`;
+  let oh=`<table class="mtable"><thead><tr><th>Client</th><th>Client PO</th><th>NDR ref</th><th>Product</th><th>Value US$</th><th>Prod %</th><th>Inspection</th><th>Insp. date</th><th>Cargo ready</th><th>ETA</th><th>Stage</th></tr></thead><tbody>`;
+  store.clients.forEach(c=>{oh+=`<tr class="grouprow"><td colspan="11">${esc(c.data.meta.client)}</td></tr>`;if(!c.data.pos.length)oh+=`<tr><td colspan="11" class="ovempty">No orders</td></tr>`;
+    c.data.pos.forEach(p=>{oh+=`<tr><td class="ovcli">${esc(c.data.meta.client)}</td><td>${inp("pos",p.id,"code",p.code)}</td><td>${inp("pos",p.id,"ndr",p.ndr)}</td><td>${inp("pos",p.id,"product",p.product)}</td><td>${inp("pos",p.id,"value",p.value)}</td><td>${inp("pos",p.id,"prod",p.prod)}</td><td>${sel("pos",p.id,"insp",INSP_STATES,p.insp)}</td><td>${inp("pos",p.id,"inspDate",p.inspDate)}</td><td>${inp("pos",p.id,"cargoReady",p.cargoReady)}</td><td>${inp("pos",p.id,"eta",p.eta)}</td><td>${sel("pos",p.id,"stage",POS_STAGES,p.stage)}</td></tr>`;});});
+  oh+=`</tbody></table>`;document.getElementById("ov-orders").innerHTML=oh;
+  let ph=`<table class="mtable" style="min-width:1020px"><thead><tr><th>Client</th><th>Ref</th><th>Topic</th><th>Value US$</th><th>Stage</th><th>Outcome</th><th>Samples</th><th>Next action</th><th>Due</th></tr></thead><tbody>`;
+  store.clients.forEach(c=>{ph+=`<tr class="grouprow"><td colspan="9">${esc(c.data.meta.client)}</td></tr>`;if(!c.data.neg.length)ph+=`<tr><td colspan="9" class="ovempty">No topics</td></tr>`;
+    c.data.neg.forEach(n=>{ph+=`<tr><td class="ovcli">${esc(c.data.meta.client)}</td><td>${inp("neg",n.id,"ref",n.ref)}</td><td>${inp("neg",n.id,"topic",n.topic)}</td><td>${inp("neg",n.id,"value",n.value)}</td><td>${sel("neg",n.id,"stage",NEG_STAGES,n.stage)}</td><td>${sel("neg",n.id,"outcome",NEG_OUTCOMES,n.outcome||"Open")}</td><td>${sel("neg",n.id,"samples",NEG_SAMPLES,n.samples||"N/A")}</td><td>${inp("neg",n.id,"next",n.next)}</td><td>${inp("neg",n.id,"due",n.due)}</td></tr>`;});});
+  ph+=`</tbody></table>`;document.getElementById("ov-pipeline").innerHTML=ph;
+}
+function renderClientSelect(){document.getElementById("clientSelect").innerHTML=store.clients.map(c=>`<option value="${c.id}" ${c.id===store.activeClientId?"selected":""}>${esc(c.data.meta.client||"Untitled")}</option>`).join("");}
+function renderAll(){useActive();renderClientSelect();renderReport();renderManage();}
+
+function makeDraftPO(neg){return {id:uid(),code:"",ndr:"",product:neg.topic||"Won deal",qty:"",value:Number(neg.value)||0,incoterm:"",prod:0,insp:"Pending",inspDate:"",cargoReady:"",eta:"",port:"",stage:"Confirmed"};}
+function setField(entity,id,f,v){
+  if(entity==="meta"){data.meta[f]=v;if(f==="client")renderClientSelect();return;}
+  if(entity==="kpi"){data.kpi[f]=v;return;}
+  if(entity==="opt"){store.settings=store.settings||{};store.settings[f]=v;return;}
+  for(const c of store.clients){const L=c.data[entity];if(L){const it=L.find(x=>x.id===id);if(it){
+    it[f]=(f==="value"||f==="prod")?(v===""?"":Number(v)):v;
+    if(entity==="neg"&&f==="outcome"&&v==="Won"&&!it.wonPo){const npo=makeDraftPO(it);c.data.pos.unshift(npo);it.wonPo=npo.id;pendingWonAlert=it.ref;}
+    return;}}}
+}
+const main=document.getElementById("main");
+main.addEventListener("input",e=>{const t=e.target;if(!t.dataset.entity)return;setField(t.dataset.entity,t.dataset.id,t.dataset.field,t.value);renderReport();save();});
+main.addEventListener("change",e=>{const t=e.target;if(!t.dataset.entity||t.tagName!=="SELECT")return;setField(t.dataset.entity,t.dataset.id,t.dataset.field,t.value);renderReport();renderManage();save();
+  if(pendingWonAlert){const r=pendingWonAlert;pendingWonAlert=null;setTimeout(()=>alert('"'+r+'" marked Won.\n\nA draft PO was created in Purchase Orders (value & product pre-filled) — open it to add the PO number and remaining details.'),40);}});
+
+document.addEventListener("click",e=>{const add=e.target.closest("[data-add]"),del=e.target.closest("[data-del]"),deliver=e.target.closest("[data-deliver]"),mode=e.target.closest("[data-mode]"),act=e.target.closest("[data-action]"),tab=e.target.closest("[data-tab]");
+  if(add)addItem(add.dataset.add);
+  else if(deliver)deliverPO(deliver.dataset.deliver);
+  else if(mode){reportMode=mode.dataset.mode;document.querySelectorAll(".mt").forEach(x=>x.classList.toggle("active",x.dataset.mode===reportMode));renderReport();}
+  else if(del){const L=data[del.dataset.del];const i=L.findIndex(x=>x.id===del.dataset.id);if(i>-1)L.splice(i,1);renderReport();renderManage();save();}
+  else if(act)doAction(act.dataset.action);
+  else if(tab)switchTab(tab.dataset.tab);});
+document.getElementById("clientSelect").addEventListener("change",e=>{store.activeClientId=e.target.value;renderAll();save();switchTab("report");});
+
+function addItem(kind){
+  if(kind==="pos")data.pos.push({id:uid(),code:"PO-2026-0000",ndr:"",product:"New product",qty:"1×40′HC",value:0,incoterm:"FOB Qingdao",prod:0,insp:"Pending",inspDate:"",cargoReady:"TBD",eta:"TBD",port:"Santos",stage:"Confirmed"});
+  if(kind==="neg")data.neg.push({id:uid(),ref:"NEG-00",topic:"New topic",next:"define next step",owner:"Desk",due:"TBD",value:0,stage:"Quotation",outcome:"Open",samples:"N/A"});
+  if(kind==="act")data.act.push({id:uid(),type:"gold",text:"New alert",owner:"Trading Desk"});
+  if(kind==="cl")data.closed.push({id:uid(),code:"PO-2026-0000",ndr:"",product:"New product",value:0,delivered:"TBD",port:"Santos"});
+  renderReport();renderManage();save();}
+function deliverPO(id){const i=data.pos.findIndex(p=>p.id===id);if(i<0)return;const p=data.pos[i];
+  const d=new Date();const def=String(d.getDate()).padStart(2,"0")+" "+d.toLocaleString("en",{month:"short"})+" "+d.getFullYear();
+  const date=prompt("Mark "+(p.code||"this PO")+" as delivered.\n\nDelivered date (shown on the record):",def);if(date===null)return;
+  data.closed.unshift({id:uid(),code:p.code,ndr:p.ndr||"",product:p.product,value:Number(p.value)||0,delivered:(date.trim()||def),port:p.port});
+  data.pos.splice(i,1);renderReport();renderManage();save();}
+function switchTab(name){document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===name));document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-"+name));if(name==="report")requestAnimationFrame(fitReport);}
+function resizeImage(file,max){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(w>h){if(w>max){h=h*max/w;w=max;}}else{if(h>max){w=w*max/h;h=max;}}const cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(img,0,0,w,h);res(cv.toDataURL("image/png"));};img.onerror=rej;img.src=r.result;};r.onerror=rej;r.readAsDataURL(file);});}
+function doAction(a){
+  if(a==="print"){switchTab("report");requestAnimationFrame(()=>setTimeout(()=>window.print(),120));}
+  else if(a==="export"){const blob=new Blob([JSON.stringify(store,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob),el=document.createElement("a");el.href=url;el.download="account-reports-"+new Date().toISOString().slice(0,10)+".json";el.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  else if(a==="import")document.getElementById("fileImport").click();
+  else if(a==="reset"){if(confirm("Reset ALL clients to the sample data? Current entries will be replaced.")){store=seedStore();renderAll();save();switchTab("report");}}
+  else if(a==="logo-upload")document.getElementById("logoInput").click();
+  else if(a==="logo-remove"){store.logo=null;renderReport();renderManage();save();}
+  else if(a==="client-new"){const n=prompt("New client name:");if(n&&n.trim()){const c={id:uid(),data:blankData(n.trim())};store.clients.push(c);store.activeClientId=c.id;renderAll();save();switchTab("settings");}}
+  else if(a==="client-rename"){const n=prompt("Rename client:",data.meta.client);if(n&&n.trim()){data.meta.client=n.trim();renderClientSelect();renderReport();renderManage();save();}}
+  else if(a==="client-del"){if(store.clients.length<=1){alert("Keep at least one client.");return;}if(confirm('Delete client "'+data.meta.client+'" and all its entries?')){store.clients=store.clients.filter(c=>c.id!==store.activeClientId);store.activeClientId=store.clients[0].id;renderAll();save();switchTab("report");}}
+}
+document.getElementById("logoInput").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;try{store.logo=await resizeImage(f,300);renderReport();renderManage();save();}catch(err){alert("Couldn't read that image.");}e.target.value="";});
+document.getElementById("fileImport").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const mg=migrateStore(JSON.parse(r.result));if(!mg)throw 0;["pos","neg","act","closed"].forEach(k=>mg.clients.forEach(c=>c.data[k].forEach(x=>x.id=x.id||uid())));store=mg;renderAll();save();switchTab("report");}catch(err){alert("That file couldn't be read as a valid backup.");}};
+  r.readAsText(f);e.target.value="";});
+window.addEventListener("resize",()=>requestAnimationFrame(fitReport));
+(async function(){const saved=await load();if(saved){const mg=migrateStore(saved);if(mg)store=mg;}renderAll();requestAnimationFrame(fitReport);})();
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  var tools = document.querySelector(".tools");
+  if (!tools || document.getElementById("logoutBtn")) return;
+  var b = document.createElement("button");
+  b.id = "logoutBtn";
+  b.className = "btn";
+  b.type = "button";
+  b.textContent = "Sign out";
+  b.addEventListener("click", async function () {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+    window.location.href = "/login";
+  });
+  tools.appendChild(b);
+});
+</script>
+
+</body>
+</html>

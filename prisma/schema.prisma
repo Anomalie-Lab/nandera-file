@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AppState {
+  id             Int      @id @default(1)
+  activeClientId String?
+  logo           String?
+  deliveredMode  String   @default("Hidden")
+  updatedAt      DateTime @updatedAt
+}
+
+model Client {
+  id             String   @id
+  company        String   @default("YOUR LOGO")
+  title          String   @default("Account Status Report")
+  client         String
+  accountManager String   @default("Trading Desk")
+  period         String   @default("")
+  issued         String   @default("")
+  reportNo       String   @default("")
+  tradeLane      String   @default("China → Brazil (BR)")
+  preparedBy     String   @default("Trading Desk")
+  contact        String   @default("desk@company.com")
+  activeFoot     String   @default("")
+  transitFoot    String   @default("")
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  purchaseOrders PurchaseOrder[]
+  negotiations   Negotiation[]
+  actions        ActionItem[]
+  closedDeals    ClosedDeal[]
+}
+
+model PurchaseOrder {
+  id         String @id
+  clientId   String
+  code       String @default("")
+  ndr        String @default("")
+  product    String @default("")
+  qty        String @default("")
+  value      Float  @default(0)
+  incoterm   String @default("")
+  prod       Int    @default(0)
+  insp       String @default("Pending")
+  inspDate   String @default("")
+  cargoReady String @default("")
+  eta        String @default("")
+  port       String @default("")
+  stage      String @default("Confirmed")
+  sortOrder  Int    @default(0)
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model Negotiation {
+  id       String  @id
+  clientId String
+  ref      String  @default("")
+  topic    String  @default("")
+  next     String  @default("")
+  owner    String  @default("")
+  due      String  @default("")
+  value    Float   @default(0)
+  stage    String  @default("Inquiry")
+  outcome  String  @default("Open")
+  samples  String  @default("N/A")
+  wonPo    String?
+  sortOrder Int    @default(0)
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model ActionItem {
+  id        String @id
+  clientId  String
+  type      String @default("gold")
+  text      String @default("")
+  owner     String @default("")
+  sortOrder Int    @default(0)
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model ClosedDeal {
+  id         String @id
+  clientId   String
+  code       String @default("")
+  ndr        String @default("")
+  product    String @default("")
+  value      Float  @default(0)
+  delivered  String @default("")
+  port       String @default("")
+  sortOrder  Int    @default(0)
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}

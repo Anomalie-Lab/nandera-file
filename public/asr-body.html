@@ -1,0 +1,76 @@
+﻿<div class="appbar">
+  <div class="logo"></div>
+  <h1><span class="full">Account Status Report Â· </span>Manager</h1>
+  <div class="clientbox"><label>Client</label><select id="clientSelect"></select>
+    <button class="iconbtn" data-action="client-new" title="New client">ï¼‹</button>
+    <button class="iconbtn" data-action="client-rename" title="Rename client">âœŽ</button>
+    <button class="iconbtn" data-action="client-del" title="Delete client">ðŸ—‘</button></div>
+  <div class="grow"></div>
+  <span class="saved" id="savedTag">Saved âœ“</span>
+  <div class="tools"><button class="btn" data-action="import">â†¥ Import</button><button class="btn" data-action="export">â†§ Backup</button><button class="btn gold" data-action="print">ðŸ–¨ Save PDF</button></div>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" data-tab="report">Report</button>
+  <button class="tab" data-tab="overview">All Clients</button>
+  <button class="tab" data-tab="pos">Purchase Orders <span class="badge" id="b-pos">0</span></button>
+  <button class="tab" data-tab="neg">Negotiations <span class="badge" id="b-neg">0</span></button>
+  <button class="tab" data-tab="actions">Actions <span class="badge" id="b-act">0</span></button>
+  <button class="tab" data-tab="closed">Closed <span class="badge" id="b-cl">0</span></button>
+  <button class="tab" data-tab="settings">Settings</button>
+</div>
+
+<main id="main">
+  <section class="panel active" id="panel-report">
+    <div class="report-bar"><div class="lead">Live preview. <span class="pagetag" id="pageTag">1 page</span></div>
+      <div class="rt"><div class="modetog"><button class="mt active" data-mode="client">This client</button><button class="mt" data-mode="all">All clients</button></div>
+      <button class="btn gold" data-action="print" style="color:#241a02">ðŸ–¨ Save as PDF</button></div></div>
+    <div id="reportViewport"><div id="reportScale"><div id="reportRoot"></div></div></div>
+  </section>
+
+  <section class="panel" id="panel-overview">
+    <div class="add-bar"><h2>All Clients â€” Orders &amp; Pipeline</h2></div>
+    <div class="panel-intro">Check and update every client's <b>confirmed orders</b> and <b>commercial pipeline</b> in one place. Changes sync straight back to each client's report.</div>
+    <h3 class="ovh">Confirmed Orders &amp; Operations â€” all clients</h3>
+    <div class="ovwrap" id="ov-orders"></div>
+    <h3 class="ovh">Commercial Pipeline â€” all clients</h3>
+    <div class="ovwrap" id="ov-pipeline"></div>
+  </section>
+
+  <section class="panel" id="panel-pos">
+    <div class="add-bar"><h2>Purchase Orders</h2><span class="count" id="c-pos"></span></div>
+    <div class="panel-intro"><b>Client PO</b> is the client's number; <b>NDR ref</b> is Nandera's internal reference. When a PO is delivered, click <b>âœ“ Mark delivered</b> to move it to Closed.</div>
+    <div id="list-pos"></div>
+    <button class="add-btn" data-add="pos">ï¼‹ Add purchase order</button>
+  </section>
+
+  <section class="panel" id="panel-neg">
+    <div class="add-bar"><h2>Commercial Pipeline</h2><span class="count" id="c-neg"></span></div>
+    <div class="panel-intro">Only <b>Open</b> topics appear in the report. <b>Won</b> keeps it for history <b>and</b> auto-creates a draft PO. <b>Sample status</b> shows whether samples are pending or approved.</div>
+    <div id="list-neg"></div>
+    <button class="add-btn" data-add="neg">ï¼‹ Add negotiation topic</button>
+  </section>
+
+  <section class="panel" id="panel-actions">
+    <div class="add-bar"><h2>Action Items &amp; Alerts</h2><span class="count" id="c-act"></span></div>
+    <div class="panel-intro">The <b>type</b> colours the tag and matches the legend on the report.</div>
+    <div id="list-act"></div>
+    <button class="add-btn" data-add="act">ï¼‹ Add action item</button>
+  </section>
+
+  <section class="panel" id="panel-closed">
+    <div class="add-bar"><h2>Closed / Delivered</h2><span class="count" id="c-cl"></span></div>
+    <div class="panel-intro">Delivered deals feed <b>Delivered POs</b> and <b>Closed Order Value</b> (realised revenue).</div>
+    <div id="list-cl"></div>
+    <button class="add-btn" data-add="cl">ï¼‹ Add closed deal</button>
+  </section>
+
+  <section class="panel" id="panel-settings">
+    <div class="add-bar"><h2>Settings</h2></div>
+    <div class="kpi-note"><b>Auto-calculated:</b> In Negotiation, Active POs, Open Order Value, In Production, Cargo Ready, In Transit, Delivered POs and Closed Order Value.</div>
+    <div id="list-settings"></div>
+  </section>
+</main>
+
+<input type="file" id="fileImport" accept="application/json,.json" style="display:none">
+<input type="file" id="logoInput" accept="image/*" style="display:none">
