@@ -11,9 +11,9 @@ import {
 
 describe("password hashing", () => {
   it("hashes and verifies a known password", () => {
-    const hash = hashPassword("Nandera.Fa.2026#");
+    const hash = hashPassword("test-password-value");
     expect(hash.startsWith("$2")).toBe(true);
-    expect(verifyPasswordHash("Nandera.Fa.2026#", hash)).toBe(true);
+    expect(verifyPasswordHash("test-password-value", hash)).toBe(true);
     expect(verifyPasswordHash("wrong", hash)).toBe(false);
   });
 

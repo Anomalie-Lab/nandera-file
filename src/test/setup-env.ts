@@ -4,3 +4,5 @@ if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
   process.env.SESSION_SECRET = "vitest-session-secret-must-be-32-chars";
 }
 process.env.SESSION_SECURE = "false";
+process.env.NANDERA_ADMINS =
+  "admin@nandera.com:vitest-admin-pass,staff@nandera.com:vitest-staff-pass";

@@ -3,10 +3,11 @@ import { prisma } from "@/lib/db";
 import { wipeDb } from "@/test/wipe-db";
 import { hashPassword } from "@/lib/passwords";
 import {
-  NANDERA_ADMINS,
   ensureAdminUsers,
   ensureMissingClientUsers,
   migrateClientUsernames,
+  nanderaAdmins,
+  parseAdminList,
   restoreOrCreateClientUser,
   snapshotClientUsers,
   usedLoginsSet,
@@ -18,6 +19,26 @@ async function addClient(id: string, name: string) {
   });
 }
 
+describe("parseAdminList", () => {
+  it("parses comma-separated email:password pairs", () => {
+    expect(
+      parseAdminList("Ada@Nandera.com:secret1,bob@nandera.com:secret2")
+    ).toEqual([
+      { email: "ada@nandera.com", password: "secret1" },
+      { email: "bob@nandera.com", password: "secret2" },
+    ]);
+  });
+
+  it("skips empty, malformed, and duplicate emails", () => {
+    expect(parseAdminList("")).toEqual([]);
+    expect(parseAdminList("nocolon")).toEqual([]);
+    expect(parseAdminList(":nopass")).toEqual([]);
+    expect(parseAdminList("a@x.com:one,a@x.com:two")).toEqual([
+      { email: "a@x.com", password: "one" },
+    ]);
+  });
+});
+
 describe("admin and client users", () => {
   beforeEach(async () => {
     await wipeDb();
@@ -28,15 +49,13 @@ describe("admin and client users", () => {
   });
 
   it("creates the Nandera admin emails once", async () => {
+    const configured = nanderaAdmins();
     const first = await ensureAdminUsers(prisma);
-    expect(first.sort()).toEqual(
-      NANDERA_ADMINS.map((a) => a.email.toLowerCase()).sort()
-    );
-    expect(first).toContain("brand@nandera.com");
+    expect(first.sort()).toEqual(configured.map((a) => a.email.toLowerCase()).sort());
     const second = await ensureAdminUsers(prisma);
     expect(second).toEqual([]);
     const admins = await prisma.user.findMany({ where: { role: "ADMIN" } });
-    expect(admins).toHaveLength(NANDERA_ADMINS.length);
+    expect(admins).toHaveLength(configured.length);
     for (const a of admins) {
       expect(a.email.endsWith("@nandera.com")).toBe(true);
       expect(a.clientId).toBeNull();

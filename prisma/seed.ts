@@ -2,10 +2,10 @@ import { PrismaClient } from "@prisma/client";
 import { seedStore } from "../src/lib/domain/seed";
 import { saveStore } from "../src/lib/store-repository";
 import {
-  NANDERA_ADMINS,
   ensureAdminUsers,
   ensureMissingClientUsers,
   migrateClientUsernames,
+  nanderaAdmins,
 } from "../src/lib/users";
 
 async function main() {
@@ -25,14 +25,16 @@ async function main() {
 
   const created = await ensureAdminUsers(prisma);
   await migrateClientUsernames(prisma);
-  console.log("\nNandera admin users:");
-  for (const admin of NANDERA_ADMINS) {
-    const mark = created.includes(admin.email.toLowerCase())
-      ? "created"
-      : "exists";
-    console.log(`  ${admin.email}  (${mark})`);
-    if (mark === "created") {
-      console.log(`    password: ${admin.password}`);
+  const admins = nanderaAdmins();
+  if (!admins.length) {
+    console.log("\nNo NANDERA_ADMINS in .env — skipped admin seed.");
+  } else {
+    console.log("\nNandera admin users:");
+    for (const admin of admins) {
+      const mark = created.includes(admin.email.toLowerCase())
+        ? "created"
+        : "exists";
+      console.log(`  ${admin.email}  (${mark})`);
     }
   }
 

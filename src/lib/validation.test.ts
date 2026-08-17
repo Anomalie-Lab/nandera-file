@@ -17,19 +17,19 @@ describe("loginSchema", () => {
   it("accepts a Nandera admin email in the user field", () => {
     const parsed = loginSchema.safeParse({
       user: "admin@nandera.com",
-      password: "Nandera.Admin.2026#",
+      password: "any-password",
     });
     expect(parsed.success).toBe(true);
   });
 
   it("still accepts legacy { email, password } payloads", () => {
     const parsed = loginSchema.safeParse({
-      email: "pablo.monzu@nandera.com",
+      email: "admin@nandera.com",
       password: "x",
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data.email).toBe("pablo.monzu@nandera.com");
+      expect(parsed.data.email).toBe("admin@nandera.com");
     }
   });
 

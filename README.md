@@ -15,7 +15,7 @@ Front-end idêntico ao HTML original. Persistência em **SQLite** via Prisma, co
 
 ```bash
 cp .env.example .env
-# edite SESSION_SECRET (>= 32 chars)
+# edite SESSION_SECRET (>= 32 chars) e NANDERA_ADMINS
 
 npm install
 npm run db:setup
@@ -29,13 +29,7 @@ Abra `http://localhost:3000` e entre com usuário + senha.
 
 Acesso total: todas as telas, edição, criação de clientes e visualização das senhas de portal.
 
-| Email | Senha |
-| --- | --- |
-| `fernando.arenales@nandera.com` | `Nandera.Fa.2026#` |
-| `pablo.monzu@nandera.com` | `Nandera.Pm.2026#` |
-| `luiza.matos@nandera.com` | `Nandera.Lm.2026#` |
-| `brand@nandera.com` | `Nandera.Brand.2026#` |
-| `admin@nandera.com` | `Nandera.Admin.2026#` |
+As contas ADMIN vêm de `NANDERA_ADMINS` no **`.env`** (formato `email:senha,email:senha`). O `.env` não vai para o git. Use `.env.example` só como modelo, sem senhas reais.
 
 ### Clientes (CLIENT)
 
@@ -59,7 +53,7 @@ O login do cliente abre **somente o Report**, em modo visualização (sem ediç�
 
 - Rotas de API e `manager.html` exigem sessão autenticada (middleware)
 - Cookie httpOnly / SameSite=Lax / Secure em produção
-- Senhas de admin só em hash (bcrypt); senhas de portal do cliente ficam recuperáveis para a equipe informar o cliente
+- Credenciais de admin só no `.env` (`NANDERA_ADMINS`); senhas de admin no banco só em hash (bcrypt). Senhas de portal do cliente ficam recuperáveis para a equipe informar o cliente
 - Payload validado (enums, tamanhos, logo só `data:image/…`)
 - Rate limit em login (10/min), save (120/min) e reset (5/min)
 - Header `X-Powered-By` desligado

@@ -8,13 +8,30 @@ import {
 
 export type Role = "ADMIN" | "CLIENT";
 
-export const NANDERA_ADMINS: { email: string; password: string }[] = [
-  { email: "fernando.arenales@nandera.com", password: "Nandera.Fa.2026#" },
-  { email: "pablo.monzu@nandera.com", password: "Nandera.Pm.2026#" },
-  { email: "luiza.matos@nandera.com", password: "Nandera.Lm.2026#" },
-  { email: "brand@nandera.com", password: "Nandera.Brand.2026#" },
-  { email: "admin@nandera.com", password: "Nandera.Admin.2026#" },
-];
+export type AdminCredential = { email: string; password: string };
+
+/** Parse `email:password,email:password` from env. Never hardcode secrets here. */
+export function parseAdminList(raw: string | undefined): AdminCredential[] {
+  if (!raw?.trim()) return [];
+  const out: AdminCredential[] = [];
+  const seen = new Set<string>();
+  for (const part of raw.split(",")) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const idx = trimmed.indexOf(":");
+    if (idx <= 0) continue;
+    const email = trimmed.slice(0, idx).trim().toLowerCase();
+    const password = trimmed.slice(idx + 1);
+    if (!email || !password || seen.has(email)) continue;
+    seen.add(email);
+    out.push({ email, password });
+  }
+  return out;
+}
+
+export function nanderaAdmins(): AdminCredential[] {
+  return parseAdminList(process.env.NANDERA_ADMINS);
+}
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -27,7 +44,7 @@ export type ClientUserSnap = {
 
 export async function ensureAdminUsers(db: Db): Promise<string[]> {
   const created: string[] = [];
-  for (const admin of NANDERA_ADMINS) {
+  for (const admin of nanderaAdmins()) {
     const email = admin.email.toLowerCase();
     const existing = await db.user.findUnique({ where: { email } });
     if (existing) continue;

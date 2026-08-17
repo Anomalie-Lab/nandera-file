@@ -13,7 +13,7 @@ vi.mock("next/headers", () => ({
 import { prisma } from "@/lib/db";
 import { wipeDb } from "@/test/wipe-db";
 import { authenticate, getSessionOptions } from "@/lib/auth";
-import { NANDERA_ADMINS, restoreOrCreateClientUser, usedLoginsSet } from "@/lib/users";
+import { nanderaAdmins, restoreOrCreateClientUser, usedLoginsSet } from "@/lib/users";
 import { hashPassword } from "@/lib/passwords";
 
 describe("getSessionOptions", () => {
@@ -43,7 +43,7 @@ describe("authenticate", () => {
   });
 
   it("signs in a Nandera admin by email", async () => {
-    const admin = NANDERA_ADMINS.find((a) => a.email.startsWith("admin@"))!;
+    const admin = nanderaAdmins().find((a) => a.email.startsWith("admin@"))!;
     const user = await authenticate(admin.email.toUpperCase(), admin.password);
     expect(user).not.toBeNull();
     expect(user?.role).toBe("ADMIN");
@@ -51,15 +51,17 @@ describe("authenticate", () => {
     expect(user?.clientId).toBeNull();
   });
 
-  it("signs in brand@nandera.com as ADMIN", async () => {
-    const user = await authenticate("brand@nandera.com", "Nandera.Brand.2026#");
-    expect(user?.role).toBe("ADMIN");
-    expect(user?.email).toBe("brand@nandera.com");
-    expect(user?.clientId).toBeNull();
+  it("signs in every configured admin", async () => {
+    for (const admin of nanderaAdmins()) {
+      const user = await authenticate(admin.email, admin.password);
+      expect(user?.role).toBe("ADMIN");
+      expect(user?.email).toBe(admin.email);
+      expect(user?.clientId).toBeNull();
+    }
   });
 
   it("rejects a wrong admin password", async () => {
-    const admin = NANDERA_ADMINS[0];
+    const admin = nanderaAdmins()[0];
     expect(await authenticate(admin.email, "wrong-password")).toBeNull();
   });
 
