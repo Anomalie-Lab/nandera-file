@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Account Status Report — Manager",
 };

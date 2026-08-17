@@ -22,6 +22,10 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL="file:./dev.db"
+# EasyPanel passa SESSION_SECRET como --build-arg, mas ARG sem ENV não entra no next build.
+# Placeholder só para o prerender; o secret real vem das env do container em runtime.
+ENV SESSION_SECRET="build-time-session-secret-placeholder-min-32-chars"
+ENV SESSION_SECURE="false"
 
 RUN npx prisma generate \
   && npx next build
