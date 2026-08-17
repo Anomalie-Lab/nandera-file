@@ -1,5 +1,6 @@
-# EasyPanel: Source = Git/GitHub, Build = Dockerfile, path = Dockerfile
-# Volume persistente: /app/data  |  Domínio: porta 3000
+# EasyPanel: Source = Git/GitHub, Build = Dockerfile
+# Banco: serviço PostgreSQL separado. Env: DATABASE_URL=postgresql://user:pass@host:5432/db
+# App: porta 3000
 FROM node:20-bookworm-slim AS deps
 WORKDIR /app
 
@@ -21,7 +22,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV DATABASE_URL="file:./dev.db"
+# prisma generate não precisa de Postgres vivo; URL só satisfaz o schema.
+ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build"
 # EasyPanel passa SESSION_SECRET como --build-arg, mas ARG sem ENV não entra no next build.
 # Placeholder só para o prerender; o secret real vem das env do container em runtime.
 ENV SESSION_SECRET="build-time-session-secret-placeholder-min-32-chars"
@@ -35,14 +37,12 @@ WORKDIR /app
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
-  && rm -rf /var/lib/apt/lists/* \
-  && mkdir -p /app/data
+  && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-ENV DATABASE_URL="file:/app/data/prod.db"
 
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
