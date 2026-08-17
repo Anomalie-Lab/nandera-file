@@ -1,11 +1,11 @@
 # Account Status Report — Manager (Next.js)
 
-Front-end idêntico ao HTML original. Persistência em **SQLite** via Prisma, com autenticação e papéis **ADMIN** / **CLIENT**. Admins entram com e-mail Nandera; clientes entram com um **usuário** gerado a partir do nome do cliente.
+Front-end idêntico ao HTML original. Persistência em **PostgreSQL** via Prisma, com autenticação e papéis **ADMIN** / **CLIENT**. Admins entram com e-mail Nandera; clientes entram com um **usuário** gerado a partir do nome do cliente.
 
 ## Stack
 
 - Next.js (App Router) + TypeScript
-- Prisma + SQLite (banco real em `prisma/dev.db`)
+- Prisma + PostgreSQL (serviço Docker `db` ou Postgres no EasyPanel)
 - Sessão httpOnly (`iron-session`)
 - Validação Zod nas APIs
 - Rate limit em login/save/reset
@@ -17,11 +17,14 @@ Front-end idêntico ao HTML original. Persistência em **SQLite** via Prisma, co
 cp .env.example .env
 # edite SESSION_SECRET (>= 32 chars) e NANDERA_ADMINS
 
+docker compose up -d db
 npm install
 npm run db:setup
 npm run build:frontend
 npm run dev
 ```
+
+No EasyPanel: crie um serviço **PostgreSQL**, aponte `DATABASE_URL` do app para ele (`postgresql://user:senha@host:5432/nandera`) e **não** use volume SQLite.
 
 Abra `http://localhost:3000` e entre com usuário + senha.
 
