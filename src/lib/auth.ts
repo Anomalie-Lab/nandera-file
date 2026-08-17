@@ -14,13 +14,21 @@ function sessionPassword(): string {
   return secret;
 }
 
+function cookieSecure(): boolean {
+  // SESSION_SECURE=false allows HTTP (IP:port) while NODE_ENV=production.
+  // Default: secure only in production (needs HTTPS).
+  if (process.env.SESSION_SECURE === "false") return false;
+  if (process.env.SESSION_SECURE === "true") return true;
+  return process.env.NODE_ENV === "production";
+}
+
 export function getSessionOptions(): SessionOptions {
   return {
     password: sessionPassword(),
     cookieName: "asr_session",
     cookieOptions: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: cookieSecure(),
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 12, // 12 hours

@@ -1,11 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 import styles from "./LoginForm.module.css";
 
 export default function LoginForm() {
-  const router = useRouter();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -26,8 +24,19 @@ export default function LoginForm() {
         setLoading(false);
         return;
       }
-      router.replace("/");
-      router.refresh();
+
+      // Confirm cookie stuck (fails on HTTP when Secure cookies are on).
+      const me = await fetch("/api/auth/me", { credentials: "same-origin" });
+      const meJson = await me.json().catch(() => ({}));
+      if (!meJson.authenticated) {
+        setError(
+          "Login OK, but session cookie was blocked. Use HTTPS or set SESSION_SECURE=false."
+        );
+        setLoading(false);
+        return;
+      }
+
+      window.location.assign("/");
     } catch {
       setError("Network error");
       setLoading(false);
