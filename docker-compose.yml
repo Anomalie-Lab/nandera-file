@@ -1,33 +1,33 @@
+# Postgres próprio vive DENTRO da imagem do app (localhost:5432).
+# EasyPanel: um serviço só + volume em /var/lib/postgresql/data
 services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://nandera:${POSTGRES_PASSWORD:-nandera}@127.0.0.1:5432/nandera
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nandera}
+    ports:
+      - "3000:3000"
+    volumes:
+      - nandera_pg:/var/lib/postgresql/data
+
+  # Só para `npm run dev` no host: docker compose --profile dev-db up -d db
   db:
+    profiles: ["dev-db"]
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: nandera
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nandera}
       POSTGRES_DB: nandera
-    volumes:
-      - nandera_pg:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nandera -d nandera"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-
-  app:
-    build: .
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql://nandera:${POSTGRES_PASSWORD:-nandera}@db:5432/nandera
-    ports:
-      - "3000:3000"
+    volumes:
+      - nandera_pg_dev:/var/lib/postgresql/data
 
 volumes:
   nandera_pg:
+  nandera_pg_dev:

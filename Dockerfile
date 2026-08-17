@@ -1,5 +1,5 @@
 # EasyPanel: Source = Git/GitHub, Build = Dockerfile
-# Banco: serviço PostgreSQL separado. Env: DATABASE_URL=postgresql://user:pass@host:5432/db
+# Postgres embutido no mesmo container. Volume persistente: /var/lib/postgresql/data
 # App: porta 3000
 FROM node:20-bookworm-slim AS deps
 WORKDIR /app
@@ -22,10 +22,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
-# prisma generate não precisa de Postgres vivo; URL só satisfaz o schema.
 ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build"
-# EasyPanel passa SESSION_SECRET como --build-arg, mas ARG sem ENV não entra no next build.
-# Placeholder só para o prerender; o secret real vem das env do container em runtime.
 ENV SESSION_SECRET="build-time-session-secret-placeholder-min-32-chars"
 ENV SESSION_SECURE="false"
 
@@ -36,13 +33,25 @@ FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends openssl ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+  && apt-get install -y --no-install-recommends \
+    openssl \
+    ca-certificates \
+    postgresql \
+    postgresql-contrib \
+  && rm -rf /var/lib/apt/lists/* \
+  && for v in 14 15 16 17; do pg_dropcluster --stop "$v" main 2>/dev/null || true; done \
+  && mkdir -p /var/lib/postgresql/data \
+  && chown -R postgres:postgres /var/lib/postgresql
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+ENV PGDATA=/var/lib/postgresql/data
+ENV POSTGRES_USER=nandera
+ENV POSTGRES_PASSWORD=nandera
+ENV POSTGRES_DB=nandera
+ENV DATABASE_URL="postgresql://nandera:nandera@127.0.0.1:5432/nandera"
 
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
@@ -55,6 +64,7 @@ COPY --from=builder /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoin
 
 RUN chmod +x /app/scripts/docker-entrypoint.sh
 
+VOLUME ["/var/lib/postgresql/data"]
 EXPOSE 3000
 
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]

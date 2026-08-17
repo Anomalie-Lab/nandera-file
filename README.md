@@ -5,7 +5,7 @@ Front-end idêntico ao HTML original. Persistência em **PostgreSQL** via Prisma
 ## Stack
 
 - Next.js (App Router) + TypeScript
-- Prisma + PostgreSQL (serviço Docker `db` ou Postgres no EasyPanel)
+- Prisma + PostgreSQL próprio (embutido na imagem Docker; volume `/var/lib/postgresql/data`)
 - Sessão httpOnly (`iron-session`)
 - Validação Zod nas APIs
 - Rate limit em login/save/reset
@@ -17,14 +17,14 @@ Front-end idêntico ao HTML original. Persistência em **PostgreSQL** via Prisma
 cp .env.example .env
 # edite SESSION_SECRET (>= 32 chars) e NANDERA_ADMINS
 
-docker compose up -d db
+docker compose --profile dev-db up -d db
 npm install
 npm run db:setup
 npm run build:frontend
 npm run dev
 ```
 
-No EasyPanel: crie um serviço **PostgreSQL**, aponte `DATABASE_URL` do app para ele (`postgresql://user:senha@host:5432/nandera`) e **não** use volume SQLite.
+No EasyPanel: **só o app** (Dockerfile). Volume persistente em `/var/lib/postgresql/data`. Não precisa de serviço PostgreSQL extra — o banco sobe junto no container. `DATABASE_URL` com `127.0.0.1:5432` está correto.
 
 Abra `http://localhost:3000` e entre com usuário + senha.
 
