@@ -70,6 +70,7 @@ export async function PUT(request: Request) {
     );
   }
 
-  const saved = await saveStore(parsed.data);
+  const { viewer: _viewer, ...toSave } = parsed.data;
+  const saved = await saveStore(toSave);
   return NextResponse.json(withViewer(saved, "ADMIN", admin.email));
 }
