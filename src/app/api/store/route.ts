@@ -1,21 +1,47 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
-import { loadStore, saveStore } from "@/lib/store-repository";
+import { getAuthUser, requireAdmin } from "@/lib/auth";
+import { loadStore, saveStore, scopeStoreForClient } from "@/lib/store-repository";
 import { storeSchema } from "@/lib/validation";
 import { rateLimit } from "@/lib/rate-limit";
 import { migrateStore } from "@/lib/domain/normalize";
 
+function withViewer(
+  store: Awaited<ReturnType<typeof loadStore>>,
+  role: "ADMIN" | "CLIENT",
+  login: string
+) {
+  return {
+    ...store,
+    viewer: { role, canEdit: role === "ADMIN", user: login, email: login },
+  };
+}
+
 export async function GET() {
-  if (!(await requireAuth())) {
+  const user = await getAuthUser();
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const store = await loadStore();
-  return NextResponse.json(store);
+
+  const store = await loadStore({ includeAccess: user.role === "ADMIN" });
+
+  if (user.role === "CLIENT") {
+    if (!user.clientId) {
+      return NextResponse.json({ error: "No client assigned" }, { status: 403 });
+    }
+    const scoped = scopeStoreForClient(store, user.clientId);
+    if (!scoped.clients.length) {
+      return NextResponse.json({ error: "Client not found" }, { status: 403 });
+    }
+    return NextResponse.json(withViewer(scoped, "CLIENT", user.email));
+  }
+
+  return NextResponse.json(withViewer(store, "ADMIN", user.email));
 }
 
 export async function PUT(request: Request) {
-  if (!(await requireAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const admin = await requireAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
@@ -31,7 +57,6 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Accept legacy single-client backups via migrate before zod
   const migrated = migrateStore(body);
   if (!migrated) {
     return NextResponse.json({ error: "Invalid store shape" }, { status: 400 });
@@ -46,5 +71,5 @@ export async function PUT(request: Request) {
   }
 
   const saved = await saveStore(parsed.data);
-  return NextResponse.json(saved);
+  return NextResponse.json(withViewer(saved, "ADMIN", admin.email));
 }

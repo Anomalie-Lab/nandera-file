@@ -30,6 +30,34 @@ html,body{background:#ECE6D9;color:var(--ink);font-family:"IBM Plex Sans",system
 .btn:hover{background:rgba(255,255,255,.14)}
 .btn.gold{background:var(--gold);border-color:var(--gold);color:#241a02}.btn.gold:hover{background:var(--gold-soft)}
 .saved{font-size:11px;color:var(--gold-soft);opacity:0;transition:opacity .3s}.saved.show{opacity:1}
+.whoami{font-size:11px;color:var(--gold-soft);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.credbox{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-top:8px}
+.credbox .f input{font-family:"IBM Plex Mono",monospace;background:#fff}
+.readonly-note{font-size:11px;color:var(--muted);margin-top:6px}
+html.role-client .tabs .tab:not([data-tab="report"]),
+body.role-client .tabs .tab:not([data-tab="report"]){display:none!important}
+html.role-client .clientbox .iconbtn,
+body.role-client .clientbox .iconbtn,
+html.role-client .tools [data-action="import"],
+body.role-client .tools [data-action="import"],
+html.role-client .tools [data-action="export"],
+body.role-client .tools [data-action="export"],
+html.role-client .modetog,
+body.role-client .modetog{display:none!important}
+html.role-client .clientbox select,
+body.role-client .clientbox select{pointer-events:none}
+html.role-client #panel-overview,
+html.role-client #panel-pos,
+html.role-client #panel-neg,
+html.role-client #panel-actions,
+html.role-client #panel-closed,
+html.role-client #panel-settings,
+body.role-client #panel-overview,
+body.role-client #panel-pos,
+body.role-client #panel-neg,
+body.role-client #panel-actions,
+body.role-client #panel-closed,
+body.role-client #panel-settings{display:none!important}
 
 .tabs{position:sticky;top:43px;z-index:39;background:var(--paper);border-bottom:1px solid var(--line);display:flex;gap:2px;padding:0 12px;overflow-x:auto}
 .tab{font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;padding:11px 12px 9px;cursor:pointer;white-space:nowrap}
@@ -213,6 +241,7 @@ tr{break-inside:avoid}
     <button class="iconbtn" data-action="client-rename" title="Rename client">✎</button>
     <button class="iconbtn" data-action="client-del" title="Delete client">🗑</button></div>
   <div class="grow"></div>
+  <span class="whoami" id="signedInAs"></span>
   <span class="saved" id="savedTag">Saved ✓</span>
   <div class="tools"><button class="btn" data-action="import">↥ Import</button><button class="btn" data-action="export">↧ Backup</button><button class="btn gold" data-action="print">🖨 Save PDF</button></div>
 </div>
@@ -286,6 +315,7 @@ tr{break-inside:avoid}
 /**
  * Storage bridge — same contract as window.storage in the HTML prototype.
  * Replaces browser-local persistence with authenticated API + SQLite.
+ * Also applies role UI: CLIENT users are report-only / read-only.
  */
 (function () {
   async function api(path, options) {
@@ -315,15 +345,38 @@ tr{break-inside:avoid}
     return res;
   }
 
+  function applyViewerMode(viewer) {
+    window.ASR_VIEWER = viewer || { role: "ADMIN", canEdit: true, user: "", email: "" };
+    const client = window.ASR_VIEWER.role === "CLIENT";
+    document.documentElement.classList.toggle("role-client", client);
+    document.body && document.body.classList.toggle("role-client", client);
+    if (client) {
+      document.querySelectorAll(".tab").forEach(function (t) {
+        t.classList.toggle("active", t.getAttribute("data-tab") === "report");
+      });
+      document.querySelectorAll(".panel").forEach(function (p) {
+        p.classList.toggle("active", p.id === "panel-report");
+      });
+      var who = document.getElementById("signedInAs");
+      if (who) who.textContent = window.ASR_VIEWER.user || window.ASR_VIEWER.email || "Client";
+    }
+  }
+
+  window.ASR_VIEWER = { role: "ADMIN", canEdit: true, user: "", email: "" };
+
   window.storage = {
     async get(_key) {
       const res = await api("/api/store");
       const data = await res.json();
-      return { value: JSON.stringify(data) };
+      applyViewerMode(data.viewer);
+      const store = Object.assign({}, data);
+      delete store.viewer;
+      return { value: JSON.stringify(store) };
     },
     async set(_key, value) {
-      // value is already JSON.stringify(store)
-      await api("/api/store", { method: "PUT", body: value });
+      if (window.ASR_VIEWER && window.ASR_VIEWER.canEdit === false) return null;
+      const res = await api("/api/store", { method: "PUT", body: value });
+      return res.json();
     },
   };
 })();
@@ -388,7 +441,7 @@ function seedStore(){const c1={id:uid(),data:ventoSul()},c2={id:uid(),data:andes
 
 let store=seedStore(),data;
 function useActive(){const c=store.clients.find(c=>c.id===store.activeClientId)||store.clients[0];store.activeClientId=c.id;data=c.data;}
-async function save(){try{if(window.storage&&window.storage.set)await window.storage.set(KEY,JSON.stringify(store));}catch(e){}const t=document.getElementById("savedTag");t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1100);}
+async function save(){try{if(window.storage&&window.storage.set){const saved=await window.storage.set(KEY,JSON.stringify(store));mergeSavedMeta(saved);}}catch(e){}const t=document.getElementById("savedTag");t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1100);}
 async function load(){try{if(window.storage&&window.storage.get){const r=await window.storage.get(KEY);if(r&&r.value)return JSON.parse(r.value);}}catch(e){}return null;}
 function normalize(d){d.meta=d.meta||{};d.kpi=d.kpi||{};["pos","neg","act","closed"].forEach(k=>d[k]=d[k]||[]);
   d.pos.forEach(p=>{if(p.insp===undefined){const q=p.qc||"pending";p.insp=q==="passed"?"Passed":q==="pending"?"Pending":"Booked";p.inspDate=(p.insp==="Booked"&&p.qcLabel)?String(p.qcLabel).replace(/^[A-Za-z ]*/,"").trim():"";}if(p.inspDate===undefined)p.inspDate="";if(p.ndr===undefined)p.ndr="";if(p.stage==="Booked/Loaded")p.stage="Loaded";if(p.stage==="Delivered / Closed")p.stage="Arrived";delete p.qc;delete p.qcLabel;});
@@ -407,6 +460,9 @@ function negStop(st){return st;}
 function chipCls(st){if(["Cargo Ready","Booked","Loaded","In Transit","Arrived"].includes(st))return"b";if(["In Production","Inspection"].includes(st))return"g";return"";}
 function inspCell(p){const map={Pending:["na","Pending"],Booked:["due","Booked"+(p.inspDate?" "+p.inspDate:"")],Concluded:["due","Concluded"],Passed:["pass","Passed"]};const x=map[p.insp]||map.Pending;return `<span class="qc ${x[0]}"><span class="d"></span>${esc(x[1])}</span>`;}
 function sampleTag(s){const m={"N/A":["smp-na","N/A"],"Requested":["smp-req","Requested"],"Pending":["smp-pend","Pending"],"Delivered":["smp-deliv","Delivered"],"Approved":["smp-appr","Approved"],"Rejected":["smp-rej","Rejected"]};const x=m[s]||m["N/A"];return '<span class="smp '+x[0]+'">'+x[1]+'</span>';}
+function formatLastMod(iso){if(!iso)return "—";const d=new Date(iso);if(isNaN(d.getTime()))return "—";const day=String(d.getDate()).padStart(2,"0");const mon=d.toLocaleString("en",{month:"short"});const yr=d.getFullYear();const hh=String(d.getHours()).padStart(2,"0");const mm=String(d.getMinutes()).padStart(2,"0");return day+" "+mon+" "+yr+" · "+hh+":"+mm;}
+function activeRecord(){return store.clients.find(c=>c.id===store.activeClientId)||store.clients[0];}
+function mergeSavedMeta(saved){if(!saved||!Array.isArray(saved.clients))return;const byId={};saved.clients.forEach(c=>{byId[c.id]=c;});store.clients.forEach(c=>{const s=byId[c.id];if(!s)return;if(s.lastModified)c.lastModified=s.lastModified;if(s.access)c.access=s.access;});}
 function codeOf(name){const w=(name||"").replace(/[^A-Za-z ]/g,"").trim().split(/\s+/);let c=(w[0]?w[0][0]:"")+(w[1]?w[1][0]:(w[0]&&w[0][1]?w[0][1]:""));return (c||"C").toUpperCase();}
 function count(stage){return data.pos.filter(p=>p.stage===stage).length;}
 function sumStage(stage){return data.pos.filter(p=>p.stage===stage).reduce((a,p)=>a+(Number(p.value)||0),0);}
@@ -453,7 +509,7 @@ function renderReport(){if(reportMode==="all"){renderConsolidated();return;}
   document.getElementById("reportRoot").innerHTML=`
   <div class="sheet">
     <header class="r-masthead"><div class="brand">${markHtml}<div class="brand-txt"><div class="eyebrow">Client Account Intelligence</div><h2>${esc(m.title)}</h2><div class="sub">Commercial &amp; operational tracking</div></div></div>
-      <dl class="meta"><dt>Client</dt><dd>${esc(m.client)}</dd><dt>Account Manager</dt><dd>${esc(m.accountManager)}</dd><dt>Reporting Period</dt><dd>${esc(m.period)}</dd><dt>Issued</dt><dd class="accent">${esc(m.issued)}</dd><dt>Report No.</dt><dd class="mono">${esc(m.reportNo)}</dd><dt>Trade Lane</dt><dd>${esc(m.tradeLane)}</dd></dl></header>
+      <dl class="meta"><dt>Client</dt><dd>${esc(m.client)}</dd><dt>Account Manager</dt><dd>${esc(m.accountManager)}</dd><dt>Reporting Period</dt><dd>${esc(m.period)}</dd><dt>Issued</dt><dd class="accent">${esc(m.issued)}</dd><dt>Report No.</dt><dd class="mono">${esc(m.reportNo)}</dd><dt>Trade Lane</dt><dd>${esc(m.tradeLane)}</dd><dt>Last updated</dt><dd class="accent">${esc(formatLastMod(activeRecord()&&activeRecord().lastModified))}</dd></dl></header>
     <section class="kpis">${kpisHtml}</section>
     <div class="sec-h"><span class="n">01</span><h3>Deal Journey — Live Position</h3><span class="rule"></span><span class="aside">Each reference plotted at its current lifecycle stage</span></div>
     <section class="journey"><div class="stops" style="grid-template-columns:repeat(${STOPS.length},1fr)">${stopsHtml}</div><div class="journey-legend"><span class="lg"><i style="background:#D9B24A"></i> Commercial / factory</span><span class="lg"><i style="background:#3C5C7A"></i> Logistics</span><span class="lg"><i style="background:#2E7D57"></i> Closed</span></div></section>
@@ -568,11 +624,16 @@ function renderManage(){
   document.getElementById("c-act").textContent=data.act.length+" item(s)";document.getElementById("c-cl").textContent=data.closed.length+" deal(s)";
 }
 function renderSettings(){const m=data.meta,k=data.kpi;const dm=(store.settings&&store.settings.deliveredMode)||"Hidden";
+  const rec=activeRecord()||{};const acc=rec.access||{};
   const logoPrev=store.logo?`<img src="${store.logo}" alt="logo">`:`<div class="ph">No logo yet</div>`;
   document.getElementById("list-settings").innerHTML=`
     <div class="mcard"><div class="ttl"><span class="idx">§</span><span class="name">Report header</span></div>
       <div class="grid">${field("meta","_","company","Logo caption (used if no image)",m.company)}${field("meta","_","title","Report title",m.title)}${field("meta","_","client","Client",m.client)}${field("meta","_","accountManager","Account manager",m.accountManager)}${field("meta","_","period","Reporting period",m.period)}${field("meta","_","issued","Issued date",m.issued)}${field("meta","_","reportNo","Report no.",m.reportNo)}${field("meta","_","tradeLane","Trade lane",m.tradeLane)}${field("meta","_","preparedBy","Prepared by",m.preparedBy)}${field("meta","_","contact","Contact",m.contact)}</div>
       <div class="hint">Renaming the Client here also renames it in the client switcher.</div></div>
+    <div class="mcard"><div class="ttl"><span class="idx">@</span><span class="name">Client portal access</span></div>
+      <div class="hint">Share these credentials with the client. They can only open the <b>Report</b> tab, in view-only mode.</div>
+      <div class="credbox"><div class="f"><label>User</label><input readonly value="${esc(acc.user||acc.email||"—")}"></div><div class="f"><label>Password</label><input readonly value="${esc(acc.password||"—")}"></div><div class="f"><label>Last updated</label><input readonly value="${esc(formatLastMod(rec.lastModified))}"></div></div>
+      <div class="readonly-note">The portal user is created from the client name (not an email). Last updated is the last change to this client's report data.</div></div>
     <div class="mcard"><div class="ttl"><span class="idx">◆</span><span class="name">Logo image <span style="font-weight:400;color:var(--muted);font-size:11px">(applies to all clients &amp; the consolidated report)</span></span></div>
       <div class="logobox"><div class="logopreview">${logoPrev}</div><div><button class="add-btn" data-action="logo-upload" style="padding:9px 16px;width:auto">↥ Upload logo image</button>${store.logo?`<button class="add-btn" data-action="logo-remove" style="padding:9px 16px;width:auto;margin-top:8px;border-color:#e6c9c4;color:var(--act)">Remove logo</button>`:""}<div class="hint">PNG/JPG. Auto-resized and framed inside the header mark.</div></div></div></div>
     <div class="mcard"><div class="ttl"><span class="idx">↦</span><span class="name">Deal Journey — delivered deals <span style="font-weight:400;color:var(--muted);font-size:11px">(applies to all clients)</span></span></div>
@@ -647,7 +708,7 @@ function doAction(a){
   else if(a==="reset"){if(confirm("Reset ALL clients to the sample data? Current entries will be replaced.")){store=seedStore();renderAll();save();switchTab("report");}}
   else if(a==="logo-upload")document.getElementById("logoInput").click();
   else if(a==="logo-remove"){store.logo=null;renderReport();renderManage();save();}
-  else if(a==="client-new"){const n=prompt("New client name:");if(n&&n.trim()){const c={id:uid(),data:blankData(n.trim())};store.clients.push(c);store.activeClientId=c.id;renderAll();save();switchTab("settings");}}
+  else if(a==="client-new"){const n=prompt("New client name:");if(n&&n.trim()){const c={id:uid(),data:blankData(n.trim())};store.clients.push(c);store.activeClientId=c.id;renderAll();Promise.resolve(save()).then(function(){renderAll();switchTab("settings");});}}
   else if(a==="client-rename"){const n=prompt("Rename client:",data.meta.client);if(n&&n.trim()){data.meta.client=n.trim();renderClientSelect();renderReport();renderManage();save();}}
   else if(a==="client-del"){if(store.clients.length<=1){alert("Keep at least one client.");return;}if(confirm('Delete client "'+data.meta.client+'" and all its entries?')){store.clients=store.clients.filter(c=>c.id!==store.activeClientId);store.activeClientId=store.clients[0].id;renderAll();save();switchTab("report");}}
 }
@@ -662,17 +723,29 @@ window.addEventListener("resize",()=>requestAnimationFrame(fitReport));
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   var tools = document.querySelector(".tools");
-  if (!tools || document.getElementById("logoutBtn")) return;
-  var b = document.createElement("button");
-  b.id = "logoutBtn";
-  b.className = "btn";
-  b.type = "button";
-  b.textContent = "Sign out";
-  b.addEventListener("click", async function () {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
-    window.location.href = "/login";
-  });
-  tools.appendChild(b);
+  if (tools && !document.getElementById("logoutBtn")) {
+    var b = document.createElement("button");
+    b.id = "logoutBtn";
+    b.className = "btn";
+    b.type = "button";
+    b.textContent = "Sign out";
+    b.addEventListener("click", async function () {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+      window.location.href = "/login";
+    });
+    tools.appendChild(b);
+  }
+  fetch("/api/auth/me", { credentials: "same-origin" })
+    .then(function (r) { return r.json(); })
+    .then(function (me) {
+      var el = document.getElementById("signedInAs");
+      if (el && me && (me.user || me.email)) el.textContent = me.user || me.email;
+      if (me && me.role === "CLIENT") {
+        document.documentElement.classList.add("role-client");
+        document.body.classList.add("role-client");
+      }
+    })
+    .catch(function () {});
 });
 </script>
 

@@ -1,6 +1,6 @@
 # Account Status Report — Manager (Next.js)
 
-Front-end idêntico ao HTML original. Persistência em **SQLite** via Prisma, com autenticação por senha.
+Front-end idêntico ao HTML original. Persistência em **SQLite** via Prisma, com autenticação e papéis **ADMIN** / **CLIENT**. Admins entram com e-mail Nandera; clientes entram com um **usuário** gerado a partir do nome do cliente.
 
 ## Stack
 
@@ -15,7 +15,7 @@ Front-end idêntico ao HTML original. Persistência em **SQLite** via Prisma, co
 
 ```bash
 cp .env.example .env
-# edite AUTH_PASSWORD e SESSION_SECRET (>= 32 chars)
+# edite SESSION_SECRET (>= 32 chars)
 
 npm install
 npm run db:setup
@@ -23,9 +23,25 @@ npm run build:frontend
 npm run dev
 ```
 
-Abra `http://localhost:3000` → login com a senha de `AUTH_PASSWORD` → app em `/manager.html`.
+Abra `http://localhost:3000` e entre com usuário + senha.
 
-Senha padrão de desenvolvimento (`.env`): `change-me-asr-2026`
+### Usuários Nandera (ADMIN)
+
+Acesso total: todas as telas, edição, criação de clientes e visualização das senhas de portal.
+
+| Email | Senha |
+| --- | --- |
+| `fernando.arenales@nandera.com` | `Nandera.Fa.2026#` |
+| `pablo.monzu@nandera.com` | `Nandera.Pm.2026#` |
+| `luiza.matos@nandera.com` | `Nandera.Lm.2026#` |
+| `brand@nandera.com` | `Nandera.Brand.2026#` |
+| `admin@nandera.com` | `Nandera.Admin.2026#` |
+
+### Clientes (CLIENT)
+
+Ao criar um cliente, o sistema gera automaticamente um **usuário a partir do nome** (ex.: `Vento Sul Importação Ltda.` → `vento.sul`) e uma senha. Não usa formato de e-mail. Os admins veem isso em **Settings → Client portal access** para informar o cliente.
+
+O login do cliente abre **somente o Report**, em modo visualização (sem edição). O relatório mostra **Last updated** (data da última alteração).
 
 ## Scripts
 
@@ -34,21 +50,23 @@ Senha padrão de desenvolvimento (`.env`): `change-me-asr-2026`
 | `npm run dev` | Servidor de desenvolvimento |
 | `npm run build` | Build de produção (+ HTML do manager) |
 | `npm test` | Testes unitários |
-| `npm run db:setup` | migrate + seed |
+| `npm run db:setup` | generate + push + seed |
 | `npm run db:reset` | zera e re-seed |
+| `npm run db:seed` | Recria admins (se faltarem) e logins de cliente |
 | `npm run build:frontend` | Regenera `public/manager.html` a partir do HTML original |
 
 ## Segurança
 
 - Rotas de API e `manager.html` exigem sessão autenticada (middleware)
 - Cookie httpOnly / SameSite=Lax / Secure em produção
-- Comparação de senha em tempo constante
+- Senhas de admin só em hash (bcrypt); senhas de portal do cliente ficam recuperáveis para a equipe informar o cliente
 - Payload validado (enums, tamanhos, logo só `data:image/…`)
 - Rate limit em login (10/min), save (120/min) e reset (5/min)
 - Header `X-Powered-By` desligado
+- CLIENT não consegue `PUT /api/store` nem reset
 
 ## Contrato de dados
 
-O JSON de Backup/Import do HTML continua sendo o schema canônico. `load()` / `save()` do front chamam `GET/PUT /api/store`, que mapeia para tabelas relacionais (`Client`, `PurchaseOrder`, `Negotiation`, `ActionItem`, `ClosedDeal`, `AppState`).
+O JSON de Backup/Import do HTML continua sendo o schema canônico. `load()` / `save()` do front chamam `GET/PUT /api/store`, que mapeia para tabelas relacionais (`Client`, `PurchaseOrder`, `Negotiation`, `ActionItem`, `ClosedDeal`, `AppState`, `User`).
 
 Regras de negócio preservadas: KPIs auto, Deal Journey, Won→PO, Deliver→Closed, forecast (Inquiry 25% / Proposal 70%), relatório consolidado.

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { resetStore } from "@/lib/store-repository";
 import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
-  if (!(await requireAuth())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const admin = await requireAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
@@ -15,5 +16,8 @@ export async function POST(request: Request) {
   }
 
   const store = await resetStore();
-  return NextResponse.json(store);
+  return NextResponse.json({
+    ...store,
+    viewer: { role: "ADMIN" as const, canEdit: true, user: admin.email, email: admin.email },
+  });
 }

@@ -127,11 +127,26 @@ export type ClientData = {
   closed: ClosedDeal[];
 };
 
-export type ClientRecord = { id: string; data: ClientData };
+export type ClientAccess = { user: string; password: string };
+
+export type ClientRecord = {
+  id: string;
+  data: ClientData;
+  lastModified?: string;
+  access?: ClientAccess;
+};
+
+export type Viewer = {
+  role: "ADMIN" | "CLIENT";
+  canEdit: boolean;
+  user: string;
+  email: string;
+};
 
 export type Store = {
   activeClientId: string;
   clients: ClientRecord[];
   logo: string | null;
   settings: { deliveredMode: string };
+  viewer?: Viewer;
 };

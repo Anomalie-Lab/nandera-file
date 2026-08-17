@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession, verifyPassword } from "@/lib/auth";
+import { authenticate, getSession } from "@/lib/auth";
 import { loginSchema } from "@/lib/validation";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -25,13 +25,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid credentials payload" }, { status: 400 });
   }
 
-  if (!verifyPassword(parsed.data.password)) {
-    return NextResponse.json({ error: "Invalid password" }, { status: 401 });
+  const login = (parsed.data.user || parsed.data.email || "").trim();
+  const user = await authenticate(login, parsed.data.password);
+  if (!user) {
+    return NextResponse.json({ error: "Invalid user or password" }, { status: 401 });
   }
 
   const session = await getSession();
   session.authenticated = true;
+  session.userId = user.id;
+  session.email = user.email;
+  session.role = user.role;
+  session.clientId = user.clientId;
   await session.save();
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    role: user.role,
+    user: user.email,
+    email: user.email,
+    canEdit: user.role === "ADMIN",
+  });
 }

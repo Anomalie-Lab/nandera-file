@@ -2,6 +2,7 @@
 /**
  * Storage bridge — same contract as window.storage in the HTML prototype.
  * Replaces browser-local persistence with authenticated API + SQLite.
+ * Also applies role UI: CLIENT users are report-only / read-only.
  */
 (function () {
   async function api(path, options) {
@@ -31,15 +32,38 @@
     return res;
   }
 
+  function applyViewerMode(viewer) {
+    window.ASR_VIEWER = viewer || { role: "ADMIN", canEdit: true, user: "", email: "" };
+    const client = window.ASR_VIEWER.role === "CLIENT";
+    document.documentElement.classList.toggle("role-client", client);
+    document.body && document.body.classList.toggle("role-client", client);
+    if (client) {
+      document.querySelectorAll(".tab").forEach(function (t) {
+        t.classList.toggle("active", t.getAttribute("data-tab") === "report");
+      });
+      document.querySelectorAll(".panel").forEach(function (p) {
+        p.classList.toggle("active", p.id === "panel-report");
+      });
+      var who = document.getElementById("signedInAs");
+      if (who) who.textContent = window.ASR_VIEWER.user || window.ASR_VIEWER.email || "Client";
+    }
+  }
+
+  window.ASR_VIEWER = { role: "ADMIN", canEdit: true, user: "", email: "" };
+
   window.storage = {
     async get(_key) {
       const res = await api("/api/store");
       const data = await res.json();
-      return { value: JSON.stringify(data) };
+      applyViewerMode(data.viewer);
+      const store = { ...data };
+      delete store.viewer;
+      return { value: JSON.stringify(store) };
     },
     async set(_key, value) {
-      // value is already JSON.stringify(store)
-      await api("/api/store", { method: "PUT", body: value });
+      if (window.ASR_VIEWER && window.ASR_VIEWER.canEdit === false) return null;
+      const res = await api("/api/store", { method: "PUT", body: value });
+      return res.json();
     },
   };
 })();

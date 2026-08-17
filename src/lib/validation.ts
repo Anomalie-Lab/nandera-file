@@ -108,11 +108,31 @@ export const storeSchema = z
           message: "Invalid deliveredMode",
         }),
     }),
+    viewer: z
+      .object({
+        role: z.string(),
+        canEdit: z.boolean(),
+        user: z.string().optional(),
+        email: z.string().optional(),
+      })
+      .optional(),
     clients: z
       .array(
         z.object({
           id: z.string().min(1).max(64),
           data: clientDataSchema,
+          lastModified: z.string().max(40).optional(),
+          access: z
+            .object({
+              user: z.string().max(200).optional(),
+              email: z.string().max(200).optional(),
+              password: z.string().max(200),
+            })
+            .transform((a) => ({
+              user: (a.user || a.email || "").trim(),
+              password: a.password,
+            }))
+            .optional(),
         })
       )
       .min(1)
@@ -178,5 +198,15 @@ export const storeSchema = z
 export type ValidatedStore = z.infer<typeof storeSchema>;
 
 export const loginSchema = z.object({
+  user: z.string().trim().min(1).max(200).optional(),
+  email: z.string().trim().min(1).max(200).optional(),
   password: z.string().min(1).max(200),
+}).superRefine((data, ctx) => {
+  if (!(data.user || data.email)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "User is required",
+      path: ["user"],
+    });
+  }
 });

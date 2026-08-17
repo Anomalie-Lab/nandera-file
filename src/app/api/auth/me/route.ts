@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getAuthUser } from "@/lib/auth";
 
 export async function GET() {
-  const session = await getSession();
-  return NextResponse.json({ authenticated: Boolean(session.authenticated) });
+  const user = await getAuthUser();
+  if (!user) {
+    return NextResponse.json({ authenticated: false });
+  }
+  return NextResponse.json({
+    authenticated: true,
+    user: user.email,
+    email: user.email,
+    role: user.role,
+    canEdit: user.role === "ADMIN",
+    clientId: user.clientId,
+  });
 }

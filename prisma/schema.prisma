@@ -15,6 +15,27 @@ model AppState {
   updatedAt      DateTime @updatedAt
 }
 
+enum Role {
+  ADMIN
+  CLIENT
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  /// Recoverable password for CLIENT portal accounts so staff can share it.
+  passwordPlain String?
+  role          Role     @default(CLIENT)
+  clientId      String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  client Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([role])
+}
+
 model Client {
   id             String   @id
   company        String   @default("YOUR LOGO")
@@ -30,6 +51,7 @@ model Client {
   activeFoot     String   @default("")
   transitFoot    String   @default("")
   sortOrder      Int      @default(0)
+  lastModified   DateTime @default(now())
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -37,6 +59,7 @@ model Client {
   negotiations   Negotiation[]
   actions        ActionItem[]
   closedDeals    ClosedDeal[]
+  portalUser     User?
 }
 
 model PurchaseOrder {

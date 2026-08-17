@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import styles from "./LoginForm.module.css";
 
 export default function LoginForm() {
+  const [user, setUser] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -16,7 +17,7 @@ export default function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ user, password }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
@@ -25,7 +26,6 @@ export default function LoginForm() {
         return;
       }
 
-      // Confirm cookie stuck (fails on HTTP when Secure cookies are on).
       const me = await fetch("/api/auth/me", { credentials: "same-origin" });
       const meJson = await me.json().catch(() => ({}));
       if (!meJson.authenticated) {
@@ -50,7 +50,19 @@ export default function LoginForm() {
         <h1>
           Account Status Report <span>Manager</span>
         </h1>
-        <p className={styles.sub}>Sign in to access the shared database.</p>
+        <p className={styles.sub}>
+          Staff sign in with their Nandera email. Clients use the user created from the client name.
+        </p>
+        <label htmlFor="user">User</label>
+        <input
+          id="user"
+          type="text"
+          autoComplete="username"
+          value={user}
+          onChange={(e) => setUser(e.target.value)}
+          required
+          disabled={loading}
+        />
         <label htmlFor="password">Password</label>
         <input
           id="password"
@@ -62,7 +74,7 @@ export default function LoginForm() {
           disabled={loading}
         />
         {error && <p className={styles.error}>{error}</p>}
-        <button type="submit" disabled={loading || !password}>
+        <button type="submit" disabled={loading || !user || !password}>
           {loading ? "Signing in…" : "Sign in"}
         </button>
       </form>

@@ -40,7 +40,7 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const authed = Boolean(session.authenticated);
+  const authed = Boolean(session.authenticated && session.role);
 
   if (!authed && !isPublic) {
     if (pathname.startsWith("/api/")) {
