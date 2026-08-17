@@ -50,9 +50,6 @@ export default function LoginForm() {
         <h1>
           Account Status Report <span>Manager</span>
         </h1>
-        <p className={styles.sub}>
-          Staff sign in with their Nandera email. Clients use the user created from the client name.
-        </p>
         <label htmlFor="user">User</label>
         <input
           id="user"
