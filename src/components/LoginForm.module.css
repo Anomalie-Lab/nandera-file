@@ -16,7 +16,7 @@
   background: #fbf8f1;
   border: 1px solid #e7dfcf;
   border-radius: 12px;
-  padding: 28px 26px 24px;
+  padding: 40px 36px 36px;
   box-shadow: 0 18px 40px -20px rgba(20, 30, 50, 0.35);
 }
 
@@ -51,8 +51,9 @@
 }
 
 .sub {
-  margin: 8px 0 18px;
+  margin: 10px 0 22px;
   font-size: 13px;
+  line-height: 1.5;
   color: #6e7889;
 }
 

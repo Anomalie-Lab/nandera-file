@@ -3,6 +3,10 @@ import type { ClientData, ClientRecord, Store } from "./domain/types";
 import { migrateStore, normalize, uid } from "./domain/normalize";
 import { seedStore } from "./domain/seed";
 import {
+  ExcelImportError,
+  parseClientWorkbook,
+} from "./excel-client";
+import {
   migrateClientUsernames,
   restoreOrCreateClientUser,
   snapshotClientUsers,
@@ -320,6 +324,30 @@ export async function saveStore(input: Store): Promise<Store> {
 export async function resetStore(): Promise<Store> {
   const seeded = seedStore();
   return saveStore(seeded);
+}
+
+/** Create one new client from the official Excel template. Does not replace existing clients. */
+export async function importClientFromExcel(buffer: Buffer): Promise<{
+  store: Store;
+  clientName: string;
+}> {
+  const data = await parseClientWorkbook(buffer);
+  const name = data.meta.client.trim();
+  const store = await loadStore({ includeAccess: true });
+  const dup = store.clients.find(
+    (c) => c.data.meta.client.trim().toLowerCase() === name.toLowerCase()
+  );
+  if (dup) {
+    throw new ExcelImportError(
+      `Já existe um cliente chamado "${name}". Renomeie na planilha ou edite o registro atual.`
+    );
+  }
+
+  const id = uid();
+  store.clients.push({ id, data });
+  store.activeClientId = id;
+  const saved = await saveStore(store);
+  return { store: saved, clientName: name };
 }
 
 export function scopeStoreForClient(store: Store, clientId: string): Store {

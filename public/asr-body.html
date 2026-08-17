@@ -1,4 +1,4 @@
-﻿<div class="appbar">
+<div class="appbar">
   <div class="logo"></div>
   <h1><span class="full">Account Status Report Â· </span>Manager</h1>
   <div class="clientbox"><label>Client</label><select id="clientSelect"></select>
@@ -7,7 +7,7 @@
     <button class="iconbtn" data-action="client-del" title="Delete client">ðŸ—‘</button></div>
   <div class="grow"></div>
   <span class="saved" id="savedTag">Saved âœ“</span>
-  <div class="tools"><button class="btn" data-action="import">â†¥ Import</button><button class="btn" data-action="export">â†§ Backup</button><button class="btn gold" data-action="print">ðŸ–¨ Save PDF</button></div>
+  <div class="tools"><button class="btn" data-action="import-template">Template</button><button class="btn" data-action="import">Import Excel</button><button class="btn" data-action="export">Backup</button><button class="btn gold" data-action="print">Save PDF</button></div>
 </div>
 
 <div class="tabs" id="tabs">
@@ -72,5 +72,5 @@
   </section>
 </main>
 
-<input type="file" id="fileImport" accept="application/json,.json" style="display:none">
+<input type="file" id="fileImport" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none">
 <input type="file" id="logoInput" accept="image/*" style="display:none">

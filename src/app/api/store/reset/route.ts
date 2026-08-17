@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, viewerPayload } from "@/lib/auth";
 import { resetStore } from "@/lib/store-repository";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -18,6 +18,6 @@ export async function POST(request: Request) {
   const store = await resetStore();
   return NextResponse.json({
     ...store,
-    viewer: { role: "ADMIN" as const, canEdit: true, user: admin.email, email: admin.email },
+    viewer: viewerPayload(admin),
   });
 }

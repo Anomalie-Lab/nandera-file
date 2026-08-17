@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthUser } from "@/lib/auth";
+import { getAuthUser, viewerPayload } from "@/lib/auth";
 
 export async function GET() {
   const user = await getAuthUser();
@@ -8,10 +8,7 @@ export async function GET() {
   }
   return NextResponse.json({
     authenticated: true,
-    user: user.email,
-    email: user.email,
-    role: user.role,
-    canEdit: user.role === "ADMIN",
+    ...viewerPayload(user),
     clientId: user.clientId,
   });
 }

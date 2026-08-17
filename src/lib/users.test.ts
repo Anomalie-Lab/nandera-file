@@ -3,14 +3,22 @@ import { prisma } from "@/lib/db";
 import { wipeDb } from "@/test/wipe-db";
 import { hashPassword } from "@/lib/passwords";
 import {
+  SUPERADMIN_EMAIL,
+  canManageUsers,
+  createStaffUser,
+  deleteStaffUser,
   ensureAdminUsers,
   ensureMissingClientUsers,
+  ensureSuperAdminRole,
+  listStaffUsers,
+  updateUserPassword,
   migrateClientUsernames,
   nanderaAdmins,
   parseAdminList,
   restoreOrCreateClientUser,
   snapshotClientUsers,
   usedLoginsSet,
+  UserAdminError,
 } from "@/lib/users";
 
 async function addClient(id: string, name: string) {
@@ -54,12 +62,17 @@ describe("admin and client users", () => {
     expect(first.sort()).toEqual(configured.map((a) => a.email.toLowerCase()).sort());
     const second = await ensureAdminUsers(prisma);
     expect(second).toEqual([]);
-    const admins = await prisma.user.findMany({ where: { role: "ADMIN" } });
+    const admins = await prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "SUPERADMIN"] } },
+    });
     expect(admins).toHaveLength(configured.length);
     for (const a of admins) {
       expect(a.email.endsWith("@nandera.com")).toBe(true);
       expect(a.clientId).toBeNull();
-      expect(a.passwordPlain).toBeNull();
+      const cred = configured.find((c) => c.email === a.email.toLowerCase());
+      expect(a.passwordPlain).toBe(cred?.password ?? null);
+      if (a.email === SUPERADMIN_EMAIL) expect(a.role).toBe("SUPERADMIN");
+      else expect(a.role).toBe("ADMIN");
     }
   });
 
@@ -158,5 +171,202 @@ describe("admin and client users", () => {
     expect(snaps[0].clientId).toBe("c1");
     expect(snaps[0].login).toBe("vento.sul");
     expect(snaps[0].login.includes("@")).toBe(false);
+  });
+});
+
+describe("SUPERADMIN staff management", () => {
+  beforeEach(async () => {
+    await wipeDb();
+  });
+
+  afterAll(async () => {
+    await wipeDb();
+  });
+
+  it("promotes fernando.arenales@nandera.com to SUPERADMIN", async () => {
+    await prisma.user.create({
+      data: {
+        email: SUPERADMIN_EMAIL,
+        passwordHash: hashPassword("test-pass-12"),
+        passwordPlain: null,
+        role: "ADMIN",
+      },
+    });
+    expect(await ensureSuperAdminRole(prisma)).toBe(true);
+    const row = await prisma.user.findUnique({
+      where: { email: SUPERADMIN_EMAIL },
+    });
+    expect(row?.role).toBe("SUPERADMIN");
+    expect(
+      canManageUsers({ role: row!.role, email: row!.email })
+    ).toBe(true);
+    expect(
+      canManageUsers({ role: "ADMIN", email: "pablo.monzu@nandera.com" })
+    ).toBe(false);
+  });
+
+  it("creates an ADMIN @nandera.com user and lists them", async () => {
+    await prisma.user.create({
+      data: {
+        email: SUPERADMIN_EMAIL,
+        passwordHash: hashPassword("test-pass-12"),
+        role: "SUPERADMIN",
+      },
+    });
+    const created = await createStaffUser(prisma, {
+      email: "desk.ops@nandera.com",
+      password: "StaffPass9",
+    });
+    expect(created.email).toBe("desk.ops@nandera.com");
+    expect(created.role).toBe("ADMIN");
+    expect(created.canDelete).toBe(true);
+
+    const listed = await listStaffUsers(prisma);
+    expect(listed[0].email).toBe(SUPERADMIN_EMAIL);
+    expect(listed[0].canDelete).toBe(false);
+    expect(listed.some((u) => u.email === "desk.ops@nandera.com")).toBe(true);
+    const adminRow = listed.find((u) => u.email === "desk.ops@nandera.com");
+    expect(adminRow?.password).toBe("StaffPass9");
+  });
+
+  it("lists passwords for all roles and updates any user password", async () => {
+    await prisma.user.create({
+      data: {
+        email: SUPERADMIN_EMAIL,
+        passwordHash: hashPassword("super-secret-12"),
+        passwordPlain: "super-secret-12",
+        role: "SUPERADMIN",
+      },
+    });
+    await prisma.user.create({
+      data: {
+        email: "admin@nandera.com",
+        passwordHash: hashPassword("admin-secret-12"),
+        passwordPlain: "admin-secret-12",
+        role: "ADMIN",
+      },
+    });
+    const client = await prisma.client.create({
+      data: {
+        id: "c-test",
+        client: "Test Client",
+        accountManager: "Desk",
+        period: "Aug",
+        issued: "1 Aug",
+        reportNo: "T-1",
+        tradeLane: "CN→BR",
+        preparedBy: "Desk",
+        contact: "x@x.com",
+        activeFoot: "",
+        transitFoot: "",
+      },
+    });
+    await prisma.user.create({
+      data: {
+        email: "test.client",
+        passwordHash: hashPassword("portal-secret"),
+        passwordPlain: "portal-secret",
+        role: "CLIENT",
+        clientId: client.id,
+      },
+    });
+
+    const listed = await listStaffUsers(prisma);
+    expect(listed).toHaveLength(3);
+    expect(listed.find((u) => u.role === "SUPERADMIN")?.password).toBe(
+      "super-secret-12"
+    );
+    expect(listed.find((u) => u.role === "ADMIN")?.password).toBe(
+      "admin-secret-12"
+    );
+    const portal = listed.find((u) => u.role === "CLIENT");
+    expect(portal?.password).toBe("portal-secret");
+    expect(portal?.clientName).toBe("Test Client");
+
+    const updated = await updateUserPassword(prisma, portal!.id, "new-portal9");
+    expect(updated.password).toBe("new-portal9");
+    const row = await prisma.user.findUnique({ where: { id: portal!.id } });
+    expect(row?.passwordPlain).toBe("new-portal9");
+  });
+
+  it("falls back to NANDERA_ADMINS env for staff without passwordPlain", async () => {
+    const prev = process.env.NANDERA_ADMINS;
+    process.env.NANDERA_ADMINS = `${SUPERADMIN_EMAIL}:env-super-12,admin@nandera.com:env-admin-12`;
+    try {
+      await prisma.user.create({
+        data: {
+          email: SUPERADMIN_EMAIL,
+          passwordHash: hashPassword("env-super-12"),
+          passwordPlain: null,
+          role: "SUPERADMIN",
+        },
+      });
+      await prisma.user.create({
+        data: {
+          email: "admin@nandera.com",
+          passwordHash: hashPassword("env-admin-12"),
+          passwordPlain: null,
+          role: "ADMIN",
+        },
+      });
+      const listed = await listStaffUsers(prisma);
+      expect(listed.find((u) => u.email === SUPERADMIN_EMAIL)?.password).toBe(
+        "env-super-12"
+      );
+      expect(listed.find((u) => u.email === "admin@nandera.com")?.password).toBe(
+        "env-admin-12"
+      );
+    } finally {
+      process.env.NANDERA_ADMINS = prev;
+    }
+  });
+
+  it("rejects non-nandera emails, the SUPERADMIN email, and duplicates", async () => {
+    await expect(
+      createStaffUser(prisma, { email: "fora@gmail.com", password: "StaffPass9" })
+    ).rejects.toBeInstanceOf(UserAdminError);
+    await expect(
+      createStaffUser(prisma, {
+        email: SUPERADMIN_EMAIL,
+        password: "StaffPass9",
+      })
+    ).rejects.toBeInstanceOf(UserAdminError);
+
+    await createStaffUser(prisma, {
+      email: "desk.ops@nandera.com",
+      password: "StaffPass9",
+    });
+    await expect(
+      createStaffUser(prisma, {
+        email: "desk.ops@nandera.com",
+        password: "StaffPass9",
+      })
+    ).rejects.toThrow(/already exists/);
+  });
+
+  it("deletes an ADMIN and refuses to delete SUPERADMIN", async () => {
+    const owner = await prisma.user.create({
+      data: {
+        email: SUPERADMIN_EMAIL,
+        passwordHash: hashPassword("test-pass-12"),
+        role: "SUPERADMIN",
+      },
+    });
+    const staff = await createStaffUser(prisma, {
+      email: "desk.ops@nandera.com",
+      password: "StaffPass9",
+    });
+
+    await expect(
+      deleteStaffUser(prisma, owner.id, SUPERADMIN_EMAIL)
+    ).rejects.toThrow(/own account/);
+    await expect(
+      deleteStaffUser(prisma, owner.id, "pablo.monzu@nandera.com")
+    ).rejects.toThrow(/SUPERADMIN/);
+
+    await deleteStaffUser(prisma, staff.id, SUPERADMIN_EMAIL);
+    expect(
+      await prisma.user.findUnique({ where: { email: "desk.ops@nandera.com" } })
+    ).toBeNull();
   });
 });

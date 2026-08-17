@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 const KEY="account_status_report_v2";
 const uid=()=>Math.random().toString(36).slice(2,9);
 const POS_STAGES=["Confirmed","In Production","Inspection","Cargo Ready","Booked","Loaded","In Transit","Arrived"];
@@ -313,6 +313,7 @@ function doAction(a){
   if(a==="print"){switchTab("report");requestAnimationFrame(()=>setTimeout(()=>window.print(),120));}
   else if(a==="export"){const blob=new Blob([JSON.stringify(store,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob),el=document.createElement("a");el.href=url;el.download="account-reports-"+new Date().toISOString().slice(0,10)+".json";el.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   else if(a==="import")document.getElementById("fileImport").click();
+  else if(a==="import-template"){const el=document.createElement("a");el.href="/api/store/import-template";el.download="nandera-client-template.xlsx";document.body.appendChild(el);el.click();el.remove();}
   else if(a==="reset"){if(confirm("Reset ALL clients to the sample data? Current entries will be replaced.")){store=seedStore();renderAll();save();switchTab("report");}}
   else if(a==="logo-upload")document.getElementById("logoInput").click();
   else if(a==="logo-remove"){store.logo=null;renderReport();renderManage();save();}
@@ -321,9 +322,17 @@ function doAction(a){
   else if(a==="client-del"){if(store.clients.length<=1){alert("Keep at least one client.");return;}if(confirm('Delete client "'+data.meta.client+'" and all its entries?')){store.clients=store.clients.filter(c=>c.id!==store.activeClientId);store.activeClientId=store.clients[0].id;renderAll();save();switchTab("report");}}
 }
 document.getElementById("logoInput").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;try{store.logo=await resizeImage(f,300);renderReport();renderManage();save();}catch(err){alert("Couldn't read that image.");}e.target.value="";});
-document.getElementById("fileImport").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{try{const mg=migrateStore(JSON.parse(r.result));if(!mg)throw 0;["pos","neg","act","closed"].forEach(k=>mg.clients.forEach(c=>c.data[k].forEach(x=>x.id=x.id||uid())));store=mg;renderAll();save();switchTab("report");}catch(err){alert("That file couldn't be read as a valid backup.");}};
-  r.readAsText(f);e.target.value="";});
+document.getElementById("fileImport").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;e.target.value="";
+  const fd=new FormData();fd.append("file",f);
+  try{
+    const res=await fetch("/api/store/import",{method:"POST",credentials:"same-origin",body:fd});
+    const j=await res.json().catch(()=>({}));
+    if(res.status===401){window.location.href="/login";return;}
+    if(!res.ok)throw new Error(j.error||"Import failed");
+    const mg=migrateStore(j);if(!mg)throw new Error("Invalid store returned");
+    store=mg;renderAll();switchTab("report");
+    alert("Cliente criado: "+(j.importedClient||data.meta.client));
+  }catch(err){alert(err&&err.message?err.message:"That Excel file couldn't be imported.");}});
 window.addEventListener("resize",()=>requestAnimationFrame(fitReport));
 (async function(){const saved=await load();if(saved){const mg=migrateStore(saved);if(mg)store=mg;}renderAll();requestAnimationFrame(fitReport);})();
 

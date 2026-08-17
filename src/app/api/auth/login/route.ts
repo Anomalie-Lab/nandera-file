@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticate, getSession } from "@/lib/auth";
+import { authenticate, getSession, viewerPayload } from "@/lib/auth";
 import { loginSchema } from "@/lib/validation";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -41,9 +41,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    role: user.role,
-    user: user.email,
-    email: user.email,
-    canEdit: user.role === "ADMIN",
+    ...viewerPayload(user),
   });
 }

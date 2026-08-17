@@ -50,6 +50,10 @@ export default function LoginForm() {
         <h1>
           Account Status Report <span>Manager</span>
         </h1>
+        <p className={styles.sub}>
+          Sign in with your credentials to view purchase orders, negotiations,
+          and shipment updates for your account.
+        </p>
         <label htmlFor="user">User</label>
         <input
           id="user"

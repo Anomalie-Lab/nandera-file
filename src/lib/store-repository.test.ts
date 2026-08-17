@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
 import { wipeDb } from "@/test/wipe-db";
 import {
+  importClientFromExcel,
   loadStore,
   resetStore,
   saveStore,
@@ -10,6 +11,7 @@ import {
 import { seedStore } from "@/lib/domain/seed";
 import { computeClientKpis } from "@/lib/domain/business";
 import { blankData, uid } from "@/lib/domain/normalize";
+import { buildClientWorkbook } from "@/lib/excel-client";
 
 describe("store repository (SQLite)", () => {
   beforeAll(async () => {
@@ -181,5 +183,53 @@ describe("store repository (SQLite)", () => {
     expect(scoped.clients[0].id).toBe(target.id);
     expect(scoped.activeClientId).toBe(target.id);
     expect(scoped.clients[0].access).toBeUndefined();
+  });
+
+  it("importClientFromExcel adds a new client without replacing the others", async () => {
+    await resetStore();
+    const before = await loadStore();
+    const names = before.clients.map((c) => c.data.meta.client);
+
+    const incoming = blankData("Mata Atlântica Pack Ltda.");
+    incoming.meta.period = "August 2026";
+    incoming.pos = [
+      {
+        id: "tmp",
+        code: "PO-2026-0401",
+        ndr: "NDR-2801",
+        product: "Bagasse trays",
+        qty: "1×40′HC",
+        value: 33500,
+        incoterm: "FOB Ningbo",
+        prod: 10,
+        insp: "Pending",
+        inspDate: "",
+        cargoReady: "15 Sep",
+        eta: "20 Oct",
+        port: "Santos",
+        stage: "Confirmed",
+      },
+    ];
+    const xlsx = await buildClientWorkbook(incoming);
+    const { store, clientName } = await importClientFromExcel(xlsx);
+
+    expect(clientName).toBe("Mata Atlântica Pack Ltda.");
+    expect(store.clients.length).toBe(before.clients.length + 1);
+    names.forEach((n) => {
+      expect(store.clients.some((c) => c.data.meta.client === n)).toBe(true);
+    });
+    const created = store.clients.find(
+      (c) => c.data.meta.client === "Mata Atlântica Pack Ltda."
+    )!;
+    expect(created).toBeTruthy();
+    expect(store.activeClientId).toBe(created.id);
+    expect(created.data.pos[0].code).toBe("PO-2026-0401");
+    expect(created.data.pos[0].product).toBe("Bagasse trays");
+    expect(created.access?.user).toBe("mata.atlantica");
+    expect(created.access?.password).toBeTruthy();
+
+    await expect(importClientFromExcel(xlsx)).rejects.toThrow(
+      /Já existe um cliente/
+    );
   });
 });

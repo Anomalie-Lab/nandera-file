@@ -33,10 +33,13 @@
   }
 
   function applyViewerMode(viewer) {
-    window.ASR_VIEWER = viewer || { role: "ADMIN", canEdit: true, user: "", email: "" };
+    window.ASR_VIEWER = viewer || { role: "ADMIN", canEdit: true, canManageUsers: false, user: "", email: "" };
     const client = window.ASR_VIEWER.role === "CLIENT";
+    const superadmin = Boolean(window.ASR_VIEWER.canManageUsers);
     document.documentElement.classList.toggle("role-client", client);
     document.body && document.body.classList.toggle("role-client", client);
+    document.documentElement.classList.toggle("role-superadmin", superadmin);
+    document.body && document.body.classList.toggle("role-superadmin", superadmin);
     if (client) {
       document.querySelectorAll(".tab").forEach(function (t) {
         t.classList.toggle("active", t.getAttribute("data-tab") === "report");
@@ -49,7 +52,7 @@
     }
   }
 
-  window.ASR_VIEWER = { role: "ADMIN", canEdit: true, user: "", email: "" };
+  window.ASR_VIEWER = { role: "ADMIN", canEdit: true, canManageUsers: false, user: "", email: "" };
 
   window.storage = {
     async get(_key) {

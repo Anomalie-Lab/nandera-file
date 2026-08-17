@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../src/lib/db";
 import { seedStore } from "../src/lib/domain/seed";
 import { saveStore } from "../src/lib/store-repository";
 import {
@@ -9,7 +9,6 @@ import {
 } from "../src/lib/users";
 
 async function main() {
-  const prisma = new PrismaClient();
   const count = await prisma.client.count();
   if (count === 0) {
     const store = seedStore();

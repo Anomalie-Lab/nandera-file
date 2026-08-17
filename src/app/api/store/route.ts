@@ -1,20 +1,10 @@
 import { NextResponse } from "next/server";
-import { getAuthUser, requireAdmin } from "@/lib/auth";
+import { getAuthUser, requireAdmin, viewerPayload } from "@/lib/auth";
 import { loadStore, saveStore, scopeStoreForClient } from "@/lib/store-repository";
 import { storeSchema } from "@/lib/validation";
 import { rateLimit } from "@/lib/rate-limit";
 import { migrateStore } from "@/lib/domain/normalize";
-
-function withViewer(
-  store: Awaited<ReturnType<typeof loadStore>>,
-  role: "ADMIN" | "CLIENT",
-  login: string
-) {
-  return {
-    ...store,
-    viewer: { role, canEdit: role === "ADMIN", user: login, email: login },
-  };
-}
+import { isStaffRole } from "@/lib/users";
 
 export async function GET() {
   const user = await getAuthUser();
@@ -22,7 +12,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const store = await loadStore({ includeAccess: user.role === "ADMIN" });
+  const store = await loadStore({ includeAccess: isStaffRole(user.role) });
 
   if (user.role === "CLIENT") {
     if (!user.clientId) {
@@ -32,10 +22,10 @@ export async function GET() {
     if (!scoped.clients.length) {
       return NextResponse.json({ error: "Client not found" }, { status: 403 });
     }
-    return NextResponse.json(withViewer(scoped, "CLIENT", user.email));
+    return NextResponse.json({ ...scoped, viewer: viewerPayload(user) });
   }
 
-  return NextResponse.json(withViewer(store, "ADMIN", user.email));
+  return NextResponse.json({ ...store, viewer: viewerPayload(user) });
 }
 
 export async function PUT(request: Request) {
@@ -72,5 +62,5 @@ export async function PUT(request: Request) {
 
   const { viewer: _viewer, ...toSave } = parsed.data;
   const saved = await saveStore(toSave);
-  return NextResponse.json(withViewer(saved, "ADMIN", admin.email));
+  return NextResponse.json({ ...saved, viewer: viewerPayload(admin) });
 }

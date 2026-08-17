@@ -137,8 +137,9 @@ export type ClientRecord = {
 };
 
 export type Viewer = {
-  role: "ADMIN" | "CLIENT";
+  role: "SUPERADMIN" | "ADMIN" | "CLIENT";
   canEdit: boolean;
+  canManageUsers?: boolean;
   user: string;
   email: string;
 };
