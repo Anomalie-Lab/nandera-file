@@ -1,5 +1,5 @@
-# Postgres próprio vive DENTRO da imagem do app (localhost:5432).
-# EasyPanel: um serviço só + volume em /var/lib/postgresql/data
+# App com Postgres embutido (localhost:5432). EasyPanel: prefira um serviço
+# PostgreSQL no mesmo projeto + DATABASE_URL interno (veja README).
 services:
   app:
     build: .
@@ -9,8 +9,10 @@ services:
     environment:
       DATABASE_URL: postgresql://nandera:${POSTGRES_PASSWORD:-nandera}@127.0.0.1:5432/nandera
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nandera}
+      POSTGRES_LISTEN_ADDRESSES: "*"
     ports:
       - "3000:3000"
+      - "5432:5432"
     volumes:
       - nandera_pg:/var/lib/postgresql/data
 

@@ -1,6 +1,6 @@
 # EasyPanel: Source = Git/GitHub, Build = Dockerfile
-# Postgres embutido no mesmo container. Volume persistente: /var/lib/postgresql/data
-# App: porta 3000
+# Preferir Postgres como serviço separado + DATABASE_URL interno.
+# Fallback: banco embutido (volume /var/lib/postgresql/data). App: porta 3000
 FROM node:20-bookworm-slim AS deps
 WORKDIR /app
 
@@ -52,6 +52,7 @@ ENV POSTGRES_USER=nandera
 ENV POSTGRES_PASSWORD=nandera
 ENV POSTGRES_DB=nandera
 ENV DATABASE_URL="postgresql://nandera:nandera@127.0.0.1:5432/nandera"
+ENV POSTGRES_LISTEN_ADDRESSES="*"
 
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
@@ -65,6 +66,6 @@ COPY --from=builder /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoin
 RUN chmod +x /app/scripts/docker-entrypoint.sh
 
 VOLUME ["/var/lib/postgresql/data"]
-EXPOSE 3000
+EXPOSE 3000 5432
 
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
