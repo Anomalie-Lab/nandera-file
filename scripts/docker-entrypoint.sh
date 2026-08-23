@@ -89,11 +89,17 @@ fi
 npx prisma db push --skip-generate
 npx tsx prisma/seed.ts
 
-child=""
+export PRISMA_STUDIO_PORT="${PRISMA_STUDIO_PORT:-5555}"
+app=""
+studio=""
 shutdown() {
-  if [ -n "$child" ]; then
-    kill "$child" 2>/dev/null || true
-    wait "$child" 2>/dev/null || true
+  if [ -n "$app" ]; then
+    kill "$app" 2>/dev/null || true
+    wait "$app" 2>/dev/null || true
+  fi
+  if [ -n "$studio" ]; then
+    kill "$studio" 2>/dev/null || true
+    wait "$studio" 2>/dev/null || true
   fi
   if [ "$EMBEDDED_POSTGRES" -eq 1 ]; then
     runuser -u postgres -- pg_ctl -D "$PGDATA" -m fast -w stop || true
@@ -101,9 +107,13 @@ shutdown() {
 }
 trap shutdown TERM INT
 
+echo "Starting Prisma Studio on 0.0.0.0:${PRISMA_STUDIO_PORT}"
+npx prisma studio --hostname 0.0.0.0 --port "$PRISMA_STUDIO_PORT" --browser none &
+studio=$!
+
 npx next start -H "$HOSTNAME" -p "$PORT" &
-child=$!
-wait "$child"
+app=$!
+wait "$app"
 status=$?
 shutdown
 exit "$status"

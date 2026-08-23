@@ -53,6 +53,7 @@ ENV POSTGRES_PASSWORD=nandera
 ENV POSTGRES_DB=nandera
 ENV DATABASE_URL="postgresql://nandera:nandera@127.0.0.1:5432/nandera"
 ENV POSTGRES_LISTEN_ADDRESSES="*"
+ENV PRISMA_STUDIO_PORT=5555
 
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
@@ -66,6 +67,6 @@ COPY --from=builder /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoin
 RUN chmod +x /app/scripts/docker-entrypoint.sh
 
 VOLUME ["/var/lib/postgresql/data"]
-EXPOSE 3000 5432
+EXPOSE 3000 5432 5555
 
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]

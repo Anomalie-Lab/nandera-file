@@ -10,9 +10,11 @@ services:
       DATABASE_URL: postgresql://nandera:${POSTGRES_PASSWORD:-nandera}@127.0.0.1:5432/nandera
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nandera}
       POSTGRES_LISTEN_ADDRESSES: "*"
+      PRISMA_STUDIO_PORT: "5555"
     ports:
       - "3000:3000"
       - "5432:5432"
+      - "5555:5555"
     volumes:
       - nandera_pg:/var/lib/postgresql/data
 

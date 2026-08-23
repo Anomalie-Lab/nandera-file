@@ -24,13 +24,14 @@ npm run build:frontend
 npm run dev
 ```
 
-No EasyPanel o app continua com `DATABASE_URL` em `127.0.0.1` (banco no mesmo container). Para acessar **pelo IP** (DBeaver, `psql`):
+No EasyPanel o app continua com `DATABASE_URL` em `127.0.0.1` (banco no mesmo container). No deploy sobem o app, o Postgres e o **Prisma Studio**.
 
-1. Env do app: `POSTGRES_LISTEN_ADDRESSES=*` e senha forte em `POSTGRES_PASSWORD`.
-2. Publique a porta **5432** (TCP) no serviço — não use o domínio HTTPS do site.
-3. Conecte em `postgresql://nandera:SENHA@IP_DO_SERVIDOR:5432/nandera`.
+1. Env: `POSTGRES_LISTEN_ADDRESSES=*`, senha forte em `POSTGRES_PASSWORD`.
+2. Publique **3000** (app), **5432** (Postgres) e **5555** (Studio). Não use o domínio HTTPS do site nessas duas últimas.
+3. DBeaver / `psql`: `postgresql://nandera:SENHA@IP_DO_SERVIDOR:5432/nandera`
+4. Prisma Studio: `http://IP_DO_SERVIDOR:5555`
 
-Volume persistente: `/var/lib/postgresql/data`. Libere 5432 no firewall do servidor se a conexão recusar.
+Volume persistente: `/var/lib/postgresql/data`. Libere 5432 e 5555 no firewall se a conexão recusar. O Studio não tem login — quem abrir a 5555 vê o banco.
 
 Abra `http://localhost:3000` e entre com usuário + senha.
 
