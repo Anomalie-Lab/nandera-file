@@ -44,6 +44,8 @@ model User {
 model Client {
   id             String   @id
   company        String   @default("YOUR LOGO")
+  /// Client-specific logo (data URL) shown on the report header.
+  logo           String?
   title          String   @default("Account Status Report")
   client         String
   accountManager String   @default("Trading Desk")

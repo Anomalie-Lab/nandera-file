@@ -63,6 +63,16 @@ const closedSchema = z.object({
   port: z.string().max(MAX_SHORT).default(""),
 });
 
+const logoDataUrl = z
+  .string()
+  .max(MAX_LOGO_CHARS)
+  .nullable()
+  .refine(
+    (v) => v === null || v.startsWith("data:image/") || v === "",
+    { message: "Logo must be a data:image URL or null" }
+  )
+  .transform((v) => (v === "" ? null : v));
+
 const clientDataSchema = z.object({
   meta: z.object({
     company: z.string().max(MAX_SHORT).default("YOUR LOGO"),
@@ -75,6 +85,7 @@ const clientDataSchema = z.object({
     tradeLane: z.string().max(MAX_SHORT).default(""),
     preparedBy: z.string().max(MAX_SHORT).default(""),
     contact: z.string().max(MAX_SHORT).default(""),
+    logo: logoDataUrl.optional().default(null),
   }),
   kpi: z.object({
     activeFoot: z.string().max(MAX_SHORT).default(""),
@@ -89,18 +100,7 @@ const clientDataSchema = z.object({
 export const storeSchema = z
   .object({
     activeClientId: z.string().min(1).max(64),
-    logo: z
-      .string()
-      .max(MAX_LOGO_CHARS)
-      .nullable()
-      .refine(
-        (v) =>
-          v === null ||
-          v.startsWith("data:image/") ||
-          v === "",
-        { message: "Logo must be a data:image URL or null" }
-      )
-      .transform((v) => (v === "" ? null : v)),
+    logo: logoDataUrl,
     settings: z.object({
       deliveredMode: z
         .string()

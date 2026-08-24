@@ -64,6 +64,8 @@ export type Meta = {
   tradeLane: string;
   preparedBy: string;
   contact: string;
+  /** Per-client logo (data:image/…) for the report header. */
+  logo?: string | null;
 };
 
 export type Kpi = { activeFoot: string; transitFoot: string };

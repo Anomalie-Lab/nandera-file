@@ -57,6 +57,7 @@ function toClientData(c: DbClient): ClientData {
       tradeLane: c.tradeLane,
       preparedBy: c.preparedBy,
       contact: c.contact,
+      logo: c.logo ?? null,
     },
     kpi: {
       activeFoot: c.activeFoot,
@@ -240,6 +241,7 @@ export async function saveStore(
         data: {
           id: c.id,
           company: m.company || "YOUR LOGO",
+          logo: m.logo ?? null,
           title: m.title || "Account Status Report",
           client: m.client || "Untitled",
           accountManager: m.accountManager || "",
@@ -403,16 +405,19 @@ export async function saveStoreForSeller(
   const full = await loadStore({ includeAccess: true });
   const existingIds = new Set(full.clients.map((c) => c.id));
 
-  for (const c of migrated.clients) {
-    if (allowed.has(c.id) || !existingIds.has(c.id)) continue;
-    throw new Error(
-      "Forbidden: cannot modify a client that is not assigned to you."
-    );
-  }
+  /** Ignore unassigned existing clients (stale UI must not block saves). */
+  let sellerClients = migrated.clients.filter(
+    (c) => allowed.has(c.id) || !existingIds.has(c.id)
+  );
 
-  const created = migrated.clients.filter((c) => !existingIds.has(c.id));
+  let created = sellerClients.filter((c) => !existingIds.has(c.id));
   if (created.length > 1) {
-    throw new Error("Forbidden: create one client at a time.");
+    const pick =
+      created.find((c) => c.id === migrated.activeClientId) ?? created[0];
+    sellerClients = sellerClients.filter(
+      (c) => existingIds.has(c.id) || c.id === pick.id
+    );
+    created = created.filter((c) => c.id === pick.id);
   }
   for (const c of created) {
     const name = (c.data.meta.client || "").trim().toLowerCase();
@@ -423,13 +428,13 @@ export async function saveStoreForSeller(
       )
     ) {
       throw new Error(
-        `A client named "${c.data.meta.client.trim()}" already exists.`
+        `Forbidden: a client named "${c.data.meta.client.trim()}" already exists.`
       );
     }
   }
 
   const byId = new Map(full.clients.map((c) => [c.id, c]));
-  for (const c of migrated.clients) {
+  for (const c of sellerClients) {
     if (allowed.has(c.id) || !existingIds.has(c.id)) {
       byId.set(c.id, c);
     }

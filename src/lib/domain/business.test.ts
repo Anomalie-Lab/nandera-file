@@ -325,7 +325,13 @@ describe("storeSchema validation (security)", () => {
     expect(storeSchema.safeParse(store).success).toBe(false);
   });
 
-  it("rejects non-image logo payloads", () => {
+  it("rejects non-image client logo payloads", () => {
+    const store = seedStore();
+    store.clients[0].data.meta.logo = "javascript:alert(1)";
+    expect(storeSchema.safeParse(store).success).toBe(false);
+  });
+
+  it("rejects non-image global logo payloads", () => {
     const store = seedStore();
     store.logo = "javascript:alert(1)";
     expect(storeSchema.safeParse(store).success).toBe(false);

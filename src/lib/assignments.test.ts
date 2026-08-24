@@ -111,7 +111,74 @@ describe("seller client assignments", () => {
         ["c1"],
         seller.id
       )
-    ).rejects.toThrow(/Forbidden/);
+    ).resolves.toBeDefined();
+
+    const hacked = await prisma.client.findUnique({ where: { id: "c2" } });
+    expect(hacked?.client).toBe("B");
+  });
+
+  it("ignores unassigned existing clients in seller payload (stale UI)", async () => {
+    const seller = await createStaffUser(prisma, {
+      email: "vendedor@nandera.com",
+      password: "SellerPass9",
+      role: "SELLER",
+    });
+    await prisma.appState.create({
+      data: { id: 1, activeClientId: "c1", deliveredMode: "Hidden" },
+    });
+    await prisma.client.create({ data: { id: "c1", client: "A", sellerId: seller.id } });
+    await prisma.client.create({ data: { id: "c2", client: "B" } });
+
+    const saved = await saveStoreForSeller(
+      {
+        activeClientId: "c1",
+        logo: null,
+        settings: { deliveredMode: "Hidden" },
+        clients: [
+          {
+            id: "c1",
+            data: {
+              ...blankData("A updated"),
+              meta: { ...blankData("A updated").meta, client: "A updated" },
+            },
+          },
+          { id: "c2", data: blankData("B hacked") },
+        ],
+      },
+      ["c1"],
+      seller.id
+    );
+
+    expect(saved.clients.find((c) => c.id === "c1")?.data.meta.client).toBe(
+      "A updated"
+    );
+    const other = await prisma.client.findUnique({ where: { id: "c2" } });
+    expect(other?.client).toBe("B");
+  });
+
+  it("rejects duplicate client name on seller create", async () => {
+    const seller = await createStaffUser(prisma, {
+      email: "vendedor2@nandera.com",
+      password: "SellerPass9",
+      role: "SELLER",
+    });
+    await prisma.appState.create({
+      data: { id: 1, activeClientId: "c1", deliveredMode: "Hidden" },
+    });
+    await prisma.client.create({ data: { id: "c1", client: "Existing" } });
+
+    await expect(
+      saveStoreForSeller(
+        {
+          activeClientId: "new1",
+          logo: null,
+          settings: { deliveredMode: "Hidden" },
+          clients: [{ id: "new1", data: blankData("Existing") }],
+        },
+        [],
+        seller.id
+      )
+    ).rejects.toThrow(/already exists/i);
   });
 
   it("seller can create a client and it is auto-assigned", async () => {
@@ -144,7 +211,7 @@ describe("seller client assignments", () => {
     expect(scoped.clients[0].id).toBe("new1");
   });
 
-  it("rejects seller creating more than one new client in one save", async () => {
+  it("creates only one new client when several are sent (uses activeClientId)", async () => {
     const seller = await createStaffUser(prisma, {
       email: "vendedor@nandera.com",
       password: "SellerPass9",
@@ -154,20 +221,23 @@ describe("seller client assignments", () => {
       data: { id: 1, activeClientId: "", deliveredMode: "Hidden" },
     });
 
-    await expect(
-      saveStoreForSeller(
-        {
-          activeClientId: "a",
-          logo: null,
-          settings: { deliveredMode: "Hidden" },
-          clients: [
-            { id: "a", data: blankData("A") },
-            { id: "b", data: blankData("B") },
-          ],
-        },
-        [],
-        seller.id
-      )
-    ).rejects.toThrow(/one client at a time/i);
+    const saved = await saveStoreForSeller(
+      {
+        activeClientId: "a",
+        logo: null,
+        settings: { deliveredMode: "Hidden" },
+        clients: [
+          { id: "a", data: blankData("A") },
+          { id: "b", data: blankData("B") },
+        ],
+      },
+      [],
+      seller.id
+    );
+
+    expect(saved.clients.find((c) => c.id === "a")?.data.meta.client).toBe("A");
+    expect(saved.clients.find((c) => c.id === "b")).toBeUndefined();
+    expect(await prisma.client.findUnique({ where: { id: "a" } })).toBeTruthy();
+    expect(await prisma.client.findUnique({ where: { id: "b" } })).toBeNull();
   });
 });

@@ -74,6 +74,8 @@ export function normalize(d: ClientData): ClientData {
     if (c.ndr === undefined) c.ndr = "";
   });
 
+  if (d.meta.logo === undefined) d.meta.logo = null;
+
   return d;
 }
 

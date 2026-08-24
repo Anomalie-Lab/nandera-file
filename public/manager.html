@@ -14,8 +14,6 @@ html,body{background:#ECE6D9;color:var(--ink);font-family:"IBM Plex Sans",system
 .mono{font-family:"IBM Plex Mono","IBM Plex Sans",monospace;font-variant-numeric:tabular-nums}
 
 .appbar{position:sticky;top:0;z-index:40;background:var(--navy);color:#EDE7D8;display:flex;align-items:center;gap:10px;padding:8px 14px;box-shadow:0 2px 10px rgba(20,30,50,.25);flex-wrap:wrap}
-.appbar .logo{width:26px;height:26px;border:1.4px solid var(--gold);border-radius:3px;display:grid;place-items:center;flex:none}
-.appbar .logo::before{content:"◆";color:var(--gold-soft);font-size:11px}
 .appbar h1{font-family:"Fraunces",Georgia,serif;font-size:15px;font-weight:600;white-space:nowrap}
 .appbar h1 span{color:var(--gold-soft)}
 .clientbox{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:3px 5px 3px 9px}
@@ -106,7 +104,8 @@ main{max-width:1180px;margin:0 auto;padding:16px}
 .mcard .del{background:none;border:1px solid var(--line);color:var(--act);border-radius:6px;padding:4px 9px;font:inherit;font-size:11px;font-weight:600;cursor:pointer;margin-left:auto}
 .mcard .del:hover{background:#fbeeec}
 .ttl-actions{margin-left:auto;display:flex;gap:8px}.ttl-actions .del{margin-left:0}
-.deliver{background:none;border:1px solid #cfe3d6;color:var(--ok);border-radius:6px;padding:4px 9px;font:inherit;font-size:11px;font-weight:600;cursor:pointer}.deliver:hover{background:#eef6f1}
+.deliver{background:none;border:1px solid #cfe3d6;color:var(--ok);border-radius:6px;padding:4px 9px;font:inherit;font-size:11px;font-weight:600;cursor:pointer}.deliver:hover{background:#eef6f1}.deliver:disabled{opacity:.45;cursor:not-allowed;border-color:var(--line);color:var(--muted)}.deliver:disabled:hover{background:none}
+.reopen{background:none;border:1px solid #d4dce8;color:var(--navy);border-radius:6px;padding:4px 9px;font:inherit;font-size:11px;font-weight:600;cursor:pointer;margin-right:6px}.reopen:hover{background:#eef2f8}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px 12px}
 .f{display:flex;flex-direction:column;gap:3px}.f.wide{grid-column:1/-1}
 .f label{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
@@ -152,18 +151,25 @@ main{max-width:1180px;margin:0 auto;padding:16px}
 /* ===== REPORT ===== */
 .sheet{width:297mm;min-height:210mm;background:var(--paper);position:relative;margin:0 auto;box-shadow:0 18px 44px -16px rgba(20,30,50,.4);display:flex;flex-direction:column;padding:6mm 9mm 6mm}
 .tabnum{font-variant-numeric:tabular-nums lining-nums}
-.r-masthead{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:8px;border-bottom:2px solid var(--navy);position:relative}
+.r-masthead{display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:2px solid var(--navy);position:relative;gap:12px}
 .r-masthead::after{content:"";position:absolute;left:0;bottom:-2px;width:132px;height:2px;background:var(--gold)}
-.brand{display:flex;gap:13px;align-items:center}
+.brand{display:flex;gap:13px;align-items:center;flex:1;min-width:0}
+.masthead-center{display:flex;align-items:center;justify-content:center;flex:none;padding:0 18px;align-self:center}
+.masthead-right{display:flex;flex-direction:row;align-items:center;justify-content:flex-end;flex:none}
 .mark{width:46px;height:46px;border:1.5px solid var(--gold);border-radius:4px;display:grid;place-items:center;background:var(--navy);flex:none;position:relative}
-.mark:not(.haslogo)::before{content:"◆";color:var(--gold-soft);font-size:17px}
+.mark.nandera-mark,.mark.client-mark:not(.client-mark-empty){width:auto;min-width:58px;max-width:150px;height:58px;background:#fff;padding:4px 6px;border:1.5px solid var(--gold);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.mark.nandera-mark img,.mark.client-mark:not(.client-mark-empty) img{height:46px;width:auto;max-width:138px;object-fit:contain;display:block}
+.mark.client-mark-empty{width:72px;height:58px;background:#fff;border:1.5px dashed var(--line);border-radius:4px;display:flex;align-items:center;justify-content:center}
+.mark.nandera-mark::before,.mark.client-mark::before{display:none;content:none}
+.mark:not(.haslogo):not(.nandera-mark):not(.client-mark)::before{content:"◆";color:var(--gold-soft);font-size:17px}
 .mark.haslogo{width:auto;min-width:58px;max-width:150px;height:58px;background:#fff;padding:4px 6px;border-color:var(--gold);overflow:hidden;display:flex;align-items:center;justify-content:center}
 .mark.haslogo img{height:46px;width:auto;max-width:138px;object-fit:contain;display:block}
 .mark span{position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);font-size:5.4px;letter-spacing:.14em;color:var(--muted);white-space:nowrap;font-weight:600}
+.mark.client-mark-empty span{position:static;transform:none;font-size:7px;letter-spacing:.08em;text-transform:uppercase;padding:0 4px;text-align:center;line-height:1.2}
 .brand-txt .eyebrow{font-size:8px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);font-weight:700}
 .brand-txt h2{font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:22px;line-height:1.02;color:var(--navy);margin-top:2px}
 .brand-txt .sub{font-size:9px;color:var(--muted);margin-top:2px}
-.meta{display:grid;grid-template-columns:auto auto;gap:2px 20px;text-align:right;font-size:8.4px;padding-top:2px}
+.meta{display:grid;grid-template-columns:auto auto;gap:2px 20px;text-align:right;font-size:8.4px;padding:0;margin:0;align-self:center}
 .meta dt{color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-size:7.4px;font-weight:600;align-self:center}
 .meta dd{color:var(--navy);font-weight:600}.meta .accent{color:var(--gold)}
 .kpis{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:8px}
@@ -260,7 +266,6 @@ tr{break-inside:avoid}
 <body>
 
 <div class="appbar">
-  <div class="logo"></div>
   <h1><span class="full">Account Status Report · </span>Manager</h1>
   <div class="clientbox"><label>Client</label><select id="clientSelect"></select>
     <button class="iconbtn" data-action="client-new" title="New client">＋</button>
@@ -303,9 +308,9 @@ tr{break-inside:avoid}
 
   <section class="panel" id="panel-pos">
     <div class="add-bar"><h2>Purchase Orders</h2><span class="count" id="c-pos"></span></div>
-    <div class="panel-intro"><b>Client PO</b> is the client's number; <b>NDR ref</b> is Nandera's internal reference. When a PO is delivered, click <b>✓ Mark delivered</b> to move it to Closed.</div>
-    <div id="list-pos"></div>
+    <div class="panel-intro"><b>Client PO</b> is the client's number; <b>NDR ref</b> is Nandera's internal reference. New POs stay here until you click <b>Mark delivered</b> (enabled after you enter the PO number). Saving is automatic — do not use Mark delivered to save a new order.</div>
     <button class="add-btn" data-add="pos">＋ Add purchase order</button>
+    <div id="list-pos"></div>
   </section>
 
   <section class="panel" id="panel-neg">
@@ -324,9 +329,9 @@ tr{break-inside:avoid}
 
   <section class="panel" id="panel-closed">
     <div class="add-bar"><h2>Closed / Delivered</h2><span class="count" id="c-cl"></span></div>
-    <div class="panel-intro">Delivered deals feed <b>Delivered POs</b> and <b>Closed Order Value</b> (realised revenue).</div>
+    <div class="panel-intro">Delivered deals only — use <b>Purchase Orders → Mark delivered</b> to move an active PO here. If one landed here by mistake, use <b>↩ Reopen as PO</b>. Avoid “Add closed deal” for new open orders.</div>
     <div id="list-cl"></div>
-    <button class="add-btn" data-add="cl">＋ Add closed deal</button>
+    <button class="add-btn" data-add="cl" style="opacity:.75">＋ Add closed deal (delivered only)</button>
   </section>
 
   <section class="panel" id="panel-settings">
@@ -420,12 +425,46 @@ tr{break-inside:avoid}
       applyViewerMode(data.viewer);
       const store = Object.assign({}, data);
       delete store.viewer;
+      if (data.viewer && data.viewer.role === "SELLER") {
+        window.ASR_SELLER_ALLOWED = new Set(
+          store.clients.map(function (c) {
+            return c.id;
+          })
+        );
+        window.ASR_SELLER_PENDING_NEW = new Set();
+      } else {
+        window.ASR_SELLER_ALLOWED = null;
+        window.ASR_SELLER_PENDING_NEW = null;
+      }
       return { value: JSON.stringify(store) };
     },
     async set(_key, value) {
       if (window.ASR_VIEWER && window.ASR_VIEWER.canEdit === false) return null;
-      const res = await api("/api/store", { method: "PUT", body: value });
-      return res.json();
+      var body = value;
+      if (window.ASR_VIEWER && window.ASR_VIEWER.role === "SELLER" && window.ASR_SELLER_ALLOWED) {
+        var parsed = JSON.parse(value);
+        var allowed = window.ASR_SELLER_ALLOWED;
+        var pending = window.ASR_SELLER_PENDING_NEW || new Set();
+        parsed.clients = (parsed.clients || []).filter(function (c) {
+          return allowed.has(c.id) || pending.has(c.id);
+        });
+        body = JSON.stringify(parsed);
+      }
+      const res = await api("/api/store", { method: "PUT", body: body });
+      const saved = await res.json();
+      if (
+        window.ASR_VIEWER &&
+        window.ASR_VIEWER.role === "SELLER" &&
+        saved &&
+        Array.isArray(saved.clients) &&
+        window.ASR_SELLER_ALLOWED
+      ) {
+        saved.clients.forEach(function (c) {
+          window.ASR_SELLER_ALLOWED.add(c.id);
+          if (window.ASR_SELLER_PENDING_NEW) window.ASR_SELLER_PENDING_NEW.delete(c.id);
+        });
+      }
+      return saved;
     },
   };
 })();
@@ -445,7 +484,16 @@ const DELIVERED_MODES=["Hidden","Count","Listed"];
 const STOPS=["Inquiry","Proposal","PO Confirmed","Production","Inspection","Cargo Ready","Booked","Loaded","In Transit","Arrived","Delivered"];
 const PALETTE=["#B8860B","#1B2A4A","#3C5C7A","#6B5AA6","#2E7D57","#9A5B12","#2C6C7C","#8A5A2B"];
 const PROB={Inquiry:0.25,Proposal:0.70};
+const NANDERA_LOGO="/LogoNandera.png";
 let pendingWonAlert=null, reportMode="client";
+
+function reportNanderaMark(){return `<div class="mark nandera-mark"><img src="${NANDERA_LOGO}" alt="Nandera"></div>`;}
+function reportClientMark(logo){
+  if(logo)return `<div class="mark client-mark"><img src="${logo}" alt="Client logo"></div>`;
+  return `<div class="mark client-mark client-mark-empty"><span>Client logo</span></div>`;
+}
+function reportMetaBlock(metaHtml){return `<div class="masthead-right">${metaHtml}</div>`;}
+function reportClientLogoCenter(clientMarkHtml){return `<div class="masthead-center">${clientMarkHtml}</div>`;}
 
 function blankData(name){return {meta:{company:"YOUR LOGO",title:"Account Status Report",client:name||"New Client",accountManager:"Trading Desk",period:"",issued:"",reportNo:"",tradeLane:"China → Brazil (BR)",preparedBy:"Trading Desk",contact:"desk@company.com"},kpi:{activeFoot:"vs. last month",transitFoot:"upcoming arrivals"},pos:[],neg:[],act:[],closed:[]};}
 function ventoSul(){const d=blankData("Vento Sul Importação Ltda.");d.meta.accountManager="F. — Trading Desk";d.meta.period="July 2026";d.meta.issued="05 Aug 2026";d.meta.reportNo="VS·ASR·2026-07";d.kpi.activeFoot="▲ 2 vs. Jun";d.kpi.transitFoot="next ETA 19 Aug · Paranaguá";
@@ -490,11 +538,45 @@ function seedStore(){const c1={id:uid(),data:ventoSul()},c2={id:uid(),data:andes
 function emptyStore(){return {activeClientId:"",clients:[],logo:null,settings:{deliveredMode:"Hidden"}};}
 
 let store=emptyStore(),data;
+let saveChain=Promise.resolve(true),saveDirty=false;
 function useActive(){if(!store.clients.length){data=blankData("");return;}const c=store.clients.find(c=>c.id===store.activeClientId)||store.clients[0];store.activeClientId=c.id;data=c.data;}
-async function save(){let ok=true;try{if(window.storage&&window.storage.set){const saved=await window.storage.set(KEY,JSON.stringify(store));if(saved&&Array.isArray(saved.clients)){const keep=store.activeClientId;const mg=migrateStore(saved);if(mg){store=mg;if(keep&&store.clients.some(c=>c.id===keep))store.activeClientId=keep;}}else{mergeSavedMeta(saved);}}}catch(e){ok=false;if(e&&e.message)alert(e.message);}const t=document.getElementById("savedTag");if(ok){t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1100);}return ok;}
+/** Serialize saves and re-run if the store changed mid-flight (avoids PUT races undoing Mark delivered / stage edits). */
+function save(){saveDirty=true;saveChain=saveChain.then(flushSave,flushSave);return saveChain;}
+async function flushSave(){
+  if(!saveDirty)return true;
+  let ok=true;
+  while(saveDirty){
+    saveDirty=false;
+    try{
+      if(window.storage&&window.storage.set){
+        const saved=await window.storage.set(KEY,JSON.stringify(store));
+        if(saved){
+          mergeActiveClientFromSaved(saved);
+          mergeSavedMeta(saved);
+        }
+      }
+    }catch(e){
+      ok=false;
+      if(e&&e.message){
+        alert(e.message);
+        if(/Forbidden/i.test(e.message)){
+          try{
+            const fresh=await load();
+            if(fresh){const mg=migrateStore(fresh);if(mg){store=mg;renderAll();}}
+          }catch(_){}
+        }
+      }
+      break;
+    }
+  }
+  const t=document.getElementById("savedTag");
+  if(ok){t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1100);}
+  return ok;
+}
 async function load(){try{if(window.storage&&window.storage.get){const r=await window.storage.get(KEY);if(r&&r.value)return JSON.parse(r.value);}}catch(e){}return null;}
 function normalize(d){d.meta=d.meta||{};d.kpi=d.kpi||{};["pos","neg","act","closed"].forEach(k=>d[k]=d[k]||[]);
   d.pos.forEach(p=>{if(p.insp===undefined){const q=p.qc||"pending";p.insp=q==="passed"?"Passed":q==="pending"?"Pending":"Booked";p.inspDate=(p.insp==="Booked"&&p.qcLabel)?String(p.qcLabel).replace(/^[A-Za-z ]*/,"").trim():"";}if(p.inspDate===undefined)p.inspDate="";if(p.ndr===undefined)p.ndr="";if(p.stage==="Booked/Loaded")p.stage="Loaded";if(p.stage==="Delivered / Closed")p.stage="Arrived";delete p.qc;delete p.qcLabel;});
+  if(d.meta.logo===undefined)d.meta.logo=null;
   d.neg.forEach(n=>{if(n.outcome===undefined)n.outcome="Open";if(n.samples===undefined)n.samples="N/A";if(n.stage==="Quotation")n.stage="Inquiry";if(n.stage==="Negotiation")n.stage="Proposal";});
   d.closed.forEach(c=>{if(c.value==null)c.value=0;if(c.ndr===undefined)c.ndr="";});return d;}
 function migrateStore(obj){if(obj&&Array.isArray(obj.clients)){if(obj.logo===undefined)obj.logo=null;if(!obj.settings)obj.settings={deliveredMode:"Hidden"};if(!obj.settings.deliveredMode)obj.settings.deliveredMode="Hidden";obj.clients.forEach(c=>{c.id=c.id||uid();normalize(c.data);});if(obj.clients.length&&!obj.clients.find(c=>c.id===obj.activeClientId))obj.activeClientId=obj.clients[0].id;if(!obj.clients.length)obj.activeClientId="";return obj;}
@@ -513,6 +595,18 @@ function sampleTag(s){const m={"N/A":["smp-na","N/A"],"Requested":["smp-req","Re
 function formatLastMod(iso){if(!iso)return "—";const d=new Date(iso);if(isNaN(d.getTime()))return "—";const day=String(d.getDate()).padStart(2,"0");const mon=d.toLocaleString("en",{month:"short"});const yr=d.getFullYear();const hh=String(d.getHours()).padStart(2,"0");const mm=String(d.getMinutes()).padStart(2,"0");return day+" "+mon+" "+yr+" · "+hh+":"+mm;}
 function activeRecord(){return store.clients.find(c=>c.id===store.activeClientId)||store.clients[0];}
 function mergeSavedMeta(saved){if(!saved||!Array.isArray(saved.clients))return;const byId={};saved.clients.forEach(c=>{byId[c.id]=c;});store.clients.forEach(c=>{const s=byId[c.id];if(!s)return;if(s.lastModified)c.lastModified=s.lastModified;if(s.access)c.access=s.access;});}
+/** After save, sync the active client's pos/closed/etc. from the server (avoids UI/DB drift). */
+function mergeActiveClientFromSaved(saved){
+  if(!saved||!Array.isArray(saved.clients))return;
+  const id=store.activeClientId;
+  const inc=saved.clients.find(c=>c.id===id);
+  const loc=store.clients.find(c=>c.id===id);
+  if(!inc||!loc)return;
+  loc.data=JSON.parse(JSON.stringify(inc.data));
+  if(inc.lastModified)loc.lastModified=inc.lastModified;
+  if(inc.access)loc.access=inc.access;
+  useActive();
+}
 function codeOf(name){const w=(name||"").replace(/[^A-Za-z ]/g,"").trim().split(/\s+/);let c=(w[0]?w[0][0]:"")+(w[1]?w[1][0]:(w[0]&&w[0][1]?w[0][1]:""));return (c||"C").toUpperCase();}
 function count(stage){return data.pos.filter(p=>p.stage===stage).length;}
 function sumStage(stage){return data.pos.filter(p=>p.stage===stage).reduce((a,p)=>a+(Number(p.value)||0),0);}
@@ -555,11 +649,11 @@ function renderReport(){if(reportMode==="all"){renderConsolidated();return;}
     return `<tr><td class="ref">${esc(n.ref)}</td><td class="topic">${esc(n.topic)}</td><td>${sampleTag(n.samples)}</td><td class="nextcol">${esc(n.next)}</td><td class="ic">${esc(n.owner)}</td><td class="ic">${esc(n.due)}</td><td class="val">${money(n.value)}</td><td><span class="stage-tag ${sc}">${esc(n.stage)}</span></td></tr>`;}).join("");
   const actRows=data.act.map(a=>`<div class="act-row"><div class="tag t-${a.type}">${ACT_SYM[a.type]||"◆"}</div><div>${boldCodes(a.text)} <span class="who">Owner: ${esc(a.owner)}</span></div></div>`).join("");
   const actLegend=ACT_TYPES.map(t=>`<span class="l"><i class="t-${t[0]}"></i> ${t[1]}</span>`).join("");
-  const markHtml=store.logo?`<div class="mark haslogo"><img src="${store.logo}" alt="logo"></div>`:`<div class="mark"><span>${esc(m.company)}</span></div>`;
+  const metaHtml=`<dl class="meta"><dt>Client</dt><dd>${esc(m.client)}</dd><dt>Account Manager</dt><dd>${esc(m.accountManager)}</dd><dt>Reporting Period</dt><dd>${esc(m.period)}</dd><dt>Issued</dt><dd class="accent">${esc(m.issued)}</dd><dt>Report No.</dt><dd class="mono">${esc(m.reportNo)}</dd><dt>Trade Lane</dt><dd>${esc(m.tradeLane)}</dd><dt>Last updated</dt><dd class="accent">${esc(formatLastMod(activeRecord()&&activeRecord().lastModified))}</dd></dl>`;
   document.getElementById("reportRoot").innerHTML=`
   <div class="sheet">
-    <header class="r-masthead"><div class="brand">${markHtml}<div class="brand-txt"><div class="eyebrow">Client Account Intelligence</div><h2>${esc(m.title)}</h2><div class="sub">Commercial &amp; operational tracking</div></div></div>
-      <dl class="meta"><dt>Client</dt><dd>${esc(m.client)}</dd><dt>Account Manager</dt><dd>${esc(m.accountManager)}</dd><dt>Reporting Period</dt><dd>${esc(m.period)}</dd><dt>Issued</dt><dd class="accent">${esc(m.issued)}</dd><dt>Report No.</dt><dd class="mono">${esc(m.reportNo)}</dd><dt>Trade Lane</dt><dd>${esc(m.tradeLane)}</dd><dt>Last updated</dt><dd class="accent">${esc(formatLastMod(activeRecord()&&activeRecord().lastModified))}</dd></dl></header>
+    <header class="r-masthead"><div class="brand">${reportNanderaMark()}<div class="brand-txt"><div class="eyebrow">Client Account Intelligence</div><h2>${esc(m.title)}</h2><div class="sub">Commercial &amp; operational tracking</div></div></div>
+      ${reportClientLogoCenter(reportClientMark(m.logo||null))}${reportMetaBlock(metaHtml)}</header>
     <section class="kpis">${kpisHtml}</section>
     <div class="sec-h"><span class="n">01</span><h3>Deal Journey — Live Position</h3><span class="rule"></span><span class="aside">Each reference plotted at its current lifecycle stage</span></div>
     <section class="journey"><div class="stops" style="grid-template-columns:repeat(${STOPS.length},1fr)">${stopsHtml}</div><div class="journey-legend"><span class="lg"><i style="background:#D9B24A"></i> Commercial / factory</span><span class="lg"><i style="background:#3C5C7A"></i> Logistics</span><span class="lg"><i style="background:#2E7D57"></i> Closed</span></div></section>
@@ -622,11 +716,11 @@ function renderConsolidated(){
   const fcRows=fc.map(r=>`<tr><td><span class="ccode" style="background:${r.c.color}">${esc(r.c.code)}</span> ${esc(r.c.name)}</td><td class="val">${rnd(r.realised)}</td><td class="val">${rnd(r.orderbook)}</td><td class="val">${rnd(r.weighted)}</td><td class="val">${rnd(r.proj)}</td></tr>`).join("")
     +`<tr style="background:#FBF3DE"><td class="prod">Portfolio total</td><td class="val">${rnd(tR)}</td><td class="val">${rnd(tO)}</td><td class="val">${rnd(tW)}</td><td class="val">${rnd(tP)}</td></tr>`;
   const today=new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
-  const markHtml=store.logo?`<div class="mark haslogo"><img src="${store.logo}" alt="logo"></div>`:`<div class="mark"><span>YOUR LOGO</span></div>`;
+  const portfolioMeta=`<dl class="meta"><dt>Scope</dt><dd>All clients (${cs.length})</dd><dt>Account Manager</dt><dd>Trading Desk</dd><dt>Snapshot</dt><dd class="accent">${today}</dd><dt>Report No.</dt><dd class="mono">PORTFOLIO</dd><dt>Trade Lanes</dt><dd>China → LATAM</dd></dl>`;
   document.getElementById("reportRoot").innerHTML=`
   <div class="sheet">
-    <header class="r-masthead"><div class="brand">${markHtml}<div class="brand-txt"><div class="eyebrow">Portfolio Intelligence</div><h2>Consolidated Business Overview</h2><div class="sub">All clients — commercial &amp; operational tracking</div></div></div>
-      <dl class="meta"><dt>Scope</dt><dd>All clients (${cs.length})</dd><dt>Account Manager</dt><dd>Trading Desk</dd><dt>Snapshot</dt><dd class="accent">${today}</dd><dt>Report No.</dt><dd class="mono">PORTFOLIO</dd><dt>Trade Lanes</dt><dd>China → LATAM</dd></dl></header>
+    <header class="r-masthead"><div class="brand">${reportNanderaMark()}<div class="brand-txt"><div class="eyebrow">Portfolio Intelligence</div><h2>Consolidated Business Overview</h2><div class="sub">All clients — commercial &amp; operational tracking</div></div></div>
+      ${reportMetaBlock(portfolioMeta)}</header>
     <section class="kpis">${kpisHtml}</section>
     <div class="roster"><span class="rlab">Clients included</span>${roster}</div>
     <div class="sec-h"><span class="n">01</span><h3>Deal Journey — All Clients</h3><span class="rule"></span><span class="aside">Every live reference across the portfolio · dot colour = client</span></div>
@@ -654,9 +748,14 @@ function field(entity,id,name,label,val,opts){const v=esc(val==null?"":val);
   return `<div class="f"><label>${label}</label><input data-entity="${entity}" data-id="${id}" data-field="${name}" value="${v}"></div>`;}
 function area(entity,id,name,label,val){return `<div class="f wide"><label>${label}</label><textarea data-entity="${entity}" data-id="${id}" data-field="${name}">${esc(val||"")}</textarea></div>`;}
 
+function poDeliverReady(p){const code=String(p.code||"").trim();return code.length>0&&code!=="PO-2026-0000";}
 function renderManage(){
   document.getElementById("list-pos").innerHTML=data.pos.map((p,i)=>{const dateF=p.insp==="Booked"?field("pos",p.id,"inspDate","Inspection booked date",p.inspDate):"";
-    return `<div class="mcard"><div class="ttl"><span class="idx">${i+1}</span><span class="name">${esc(p.code||"Draft PO — add number")}</span><div class="ttl-actions"><button class="deliver" data-deliver="${p.id}">✓ Mark delivered</button><button class="del" data-del="pos" data-id="${p.id}">Delete</button></div></div>
+    const canDeliver=poDeliverReady(p);
+    const deliverBtn=canDeliver
+      ?`<button type="button" class="deliver" data-deliver="${p.id}">Mark delivered</button>`
+      :`<button type="button" class="deliver" disabled title="Enter the client PO number first">Mark delivered</button>`;
+    return `<div class="mcard"><div class="ttl"><span class="idx">${i+1}</span><span class="name">${esc(p.code||"Draft PO — add number")}</span><div class="ttl-actions">${deliverBtn}<button type="button" class="del" data-del="pos" data-id="${p.id}">Delete</button></div></div>
       <div class="grid">${field("pos",p.id,"code","Client PO number",p.code)}${field("pos",p.id,"ndr","NDR ref (Nandera)",p.ndr)}${field("pos",p.id,"product","Product",p.product)}${field("pos",p.id,"qty","Qty / Volume",p.qty)}${field("pos",p.id,"value","Value (US$)",p.value)}${field("pos",p.id,"incoterm","Incoterm",p.incoterm)}${field("pos",p.id,"prod","Production %",p.prod)}${field("pos",p.id,"insp","Inspection status",p.insp,INSP_STATES)}${dateF}${field("pos",p.id,"cargoReady","Cargo ready / ETD",p.cargoReady)}${field("pos",p.id,"eta","ETA",p.eta)}${field("pos",p.id,"port","Destination port",p.port)}${field("pos",p.id,"stage","Stage",p.stage,POS_STAGES)}</div></div>`;}).join("")||`<div class="hint">No purchase orders yet.</div>`;
   document.getElementById("list-neg").innerHTML=data.neg.map((n,i)=>`
     <div class="mcard"><div class="ttl"><span class="idx">${i+1}</span><span class="name">${esc(n.ref||"New topic")}</span><span class="tagoc oc-${n.outcome||"Open"}">${esc(n.outcome||"Open")}</span><button class="del" data-del="neg" data-id="${n.id}">Delete</button></div>
@@ -665,7 +764,7 @@ function renderManage(){
     <div class="mcard"><div class="ttl"><span class="idx">${i+1}</span><span class="name">Alert</span><button class="del" data-del="act" data-id="${a.id}">Delete</button></div>
       <div class="grid"><div class="f"><label>Type</label><select data-entity="act" data-id="${a.id}" data-field="type">${ACT_TYPES.map(t=>`<option value="${t[0]}" ${t[0]===a.type?"selected":""}>${t[1]}</option>`).join("")}</select></div>${field("act",a.id,"owner","Owner",a.owner)}${area("act",a.id,"text","Message",a.text)}</div></div>`).join("")||`<div class="hint">No action items.</div>`;
   document.getElementById("list-cl").innerHTML=data.closed.map((c,i)=>`
-    <div class="mcard"><div class="ttl"><span class="idx">${i+1}</span><span class="name">${esc(c.code||"Closed")}</span><button class="del" data-del="closed" data-id="${c.id}">Delete</button></div>
+    <div class="mcard"><div class="ttl"><span class="idx">${i+1}</span><span class="name">${esc(c.code||"Closed")}</span><div class="ttl-actions"><button type="button" class="reopen" data-reopen="${c.id}">↩ Reopen as PO</button><button type="button" class="del" data-del="closed" data-id="${c.id}">Delete</button></div></div>
       <div class="grid">${field("closed",c.id,"code","Client PO number",c.code)}${field("closed",c.id,"ndr","NDR ref (Nandera)",c.ndr)}${field("closed",c.id,"product","Product",c.product)}${field("closed",c.id,"value","Value (US$)",c.value)}${field("closed",c.id,"delivered","Delivered",c.delivered)}${field("closed",c.id,"port","Port",c.port)}</div></div>`).join("")||`<div class="hint">Nothing closed yet.</div>`;
   renderSettings();renderOverview();
   document.getElementById("b-pos").textContent=data.pos.length;document.getElementById("b-neg").textContent=data.neg.length;
@@ -675,17 +774,17 @@ function renderManage(){
 }
 function renderSettings(){const m=data.meta,k=data.kpi;const dm=(store.settings&&store.settings.deliveredMode)||"Hidden";
   const rec=activeRecord()||{};const acc=rec.access||{};
-  const logoPrev=store.logo?`<img src="${store.logo}" alt="logo">`:`<div class="ph">No logo yet</div>`;
+  const logoPrev=data.meta.logo?`<img src="${data.meta.logo}" alt="Client logo">`:`<div class="ph">No client logo yet</div>`;
   document.getElementById("list-settings").innerHTML=`
     <div class="mcard"><div class="ttl"><span class="idx">§</span><span class="name">Report header</span></div>
-      <div class="grid">${field("meta","_","company","Logo caption (used if no image)",m.company)}${field("meta","_","title","Report title",m.title)}${field("meta","_","client","Client",m.client)}${field("meta","_","accountManager","Account manager",m.accountManager)}${field("meta","_","period","Reporting period",m.period)}${field("meta","_","issued","Issued date",m.issued)}${field("meta","_","reportNo","Report no.",m.reportNo)}${field("meta","_","tradeLane","Trade lane",m.tradeLane)}${field("meta","_","preparedBy","Prepared by",m.preparedBy)}${field("meta","_","contact","Contact",m.contact)}</div>
-      <div class="hint">Renaming the Client here also renames it in the client switcher.</div></div>
+      <div class="grid">${field("meta","_","company","Logo caption (legacy)",m.company)}${field("meta","_","title","Report title",m.title)}${field("meta","_","client","Client",m.client)}${field("meta","_","accountManager","Account manager",m.accountManager)}${field("meta","_","period","Reporting period",m.period)}${field("meta","_","issued","Issued date",m.issued)}${field("meta","_","reportNo","Report no.",m.reportNo)}${field("meta","_","tradeLane","Trade lane",m.tradeLane)}${field("meta","_","preparedBy","Prepared by",m.preparedBy)}${field("meta","_","contact","Contact",m.contact)}</div>
+      <div class="hint">Renaming the Client here also renames it in the client switcher. The <b>Nandera</b> logo is fixed on the left; upload the <b>client logo</b> below — it appears in the center of the report header.</div></div>
     <div class="mcard"><div class="ttl"><span class="idx">@</span><span class="name">Client portal access</span></div>
       <div class="hint">Share these credentials with the client. They can only open the <b>Report</b> tab, in view-only mode.</div>
       <div class="credbox"><div class="f"><label>User</label><input readonly value="${esc(acc.user||acc.email||"—")}"></div><div class="f"><label>Password</label><input readonly value="${esc(acc.password||"—")}"></div><div class="f"><label>Last updated</label><input readonly value="${esc(formatLastMod(rec.lastModified))}"></div></div>
       <div class="readonly-note">The portal user is created from the client name (not an email). Last updated is the last change to this client's report data.</div></div>
-    <div class="mcard"><div class="ttl"><span class="idx">◆</span><span class="name">Logo image <span style="font-weight:400;color:var(--muted);font-size:11px">(applies to all clients &amp; the consolidated report)</span></span></div>
-      <div class="logobox"><div class="logopreview">${logoPrev}</div><div><button class="add-btn" data-action="logo-upload" style="padding:9px 16px;width:auto">↥ Upload logo image</button>${store.logo?`<button class="add-btn" data-action="logo-remove" style="padding:9px 16px;width:auto;margin-top:8px;border-color:#e6c9c4;color:var(--act)">Remove logo</button>`:""}<div class="hint">PNG/JPG. Auto-resized and framed inside the header mark.</div></div></div></div>
+    <div class="mcard"><div class="ttl"><span class="idx">◆</span><span class="name">Client logo — ${esc(m.client||"Untitled")} <span style="font-weight:400;color:var(--muted);font-size:11px">(top-center of the report, between the title and client details)</span></span></div>
+      <div class="logobox"><div class="logopreview">${logoPrev}</div><div><button class="add-btn" data-action="logo-upload" style="padding:9px 16px;width:auto">↥ Upload client logo</button>${data.meta.logo?`<button class="add-btn" data-action="logo-remove" style="padding:9px 16px;width:auto;margin-top:8px;border-color:#e6c9c4;color:var(--act)">Remove client logo</button>`:""}<div class="hint">PNG/JPG. Auto-resized. Each client has its own logo — switch clients to upload a different one.</div></div></div></div>
     <div class="mcard"><div class="ttl"><span class="idx">↦</span><span class="name">Deal Journey — delivered deals <span style="font-weight:400;color:var(--muted);font-size:11px">(applies to all clients)</span></span></div>
       <div class="grid"><div class="f"><label>Show delivered POs on the journey</label><select data-entity="opt" data-id="_" data-field="deliveredMode">${DELIVERED_MODES.map(x=>`<option ${x===dm?"selected":""}>${x}</option>`).join("")}</select></div></div>
       <div class="hint"><b>Hidden</b> — delivered deals drop off the journey. <b>Count</b> — a single "N closed" tag. <b>Listed</b> — every delivered PO plotted.</div></div>
@@ -726,16 +825,32 @@ function setField(entity,id,f,v){
     return;}}}
 }
 const main=document.getElementById("main");
-main.addEventListener("input",e=>{const t=e.target;if(!t.dataset.entity)return;setField(t.dataset.entity,t.dataset.id,t.dataset.field,t.value);renderReport();save();});
+function syncDeliverButton(inputEl){
+  if(!inputEl||inputEl.dataset.entity!=="pos"||inputEl.dataset.field!=="code")return;
+  const p=data.pos.find(x=>x.id===inputEl.dataset.id);
+  const card=inputEl.closest(".mcard");
+  const actions=card&&card.querySelector(".ttl-actions");
+  if(!p||!actions)return;
+  const ready=poDeliverReady(p);
+  const btn=actions.querySelector(".deliver");
+  if(!btn)return;
+  if(ready&&!btn.dataset.deliver){
+    btn.outerHTML='<button type="button" class="deliver" data-deliver="'+p.id+'">Mark delivered</button>';
+  }else if(!ready&&btn.dataset.deliver){
+    btn.outerHTML='<button type="button" class="deliver" disabled title="Enter the client PO number first">Mark delivered</button>';
+  }
+}
+main.addEventListener("input",e=>{const t=e.target;if(!t.dataset.entity)return;setField(t.dataset.entity,t.dataset.id,t.dataset.field,t.value);renderReport();syncDeliverButton(t);save();});
 main.addEventListener("change",e=>{const t=e.target;
   if(t&&t.dataset&&t.dataset.assignClient){saveAssignment(t.dataset.assignClient,t.value||null);return;}
   if(t&&t.dataset&&t.dataset.userRole){saveUserRole(t.dataset.userRole,t.value);return;}
   if(!t.dataset.entity||t.tagName!=="SELECT")return;setField(t.dataset.entity,t.dataset.id,t.dataset.field,t.value);renderReport();renderManage();save();
   if(pendingWonAlert){const r=pendingWonAlert;pendingWonAlert=null;setTimeout(()=>alert('"'+r+'" marked Won.\n\nA draft PO was created in Purchase Orders (value & product pre-filled) — open it to add the PO number and remaining details.'),40);}});
 
-document.addEventListener("click",e=>{const add=e.target.closest("[data-add]"),del=e.target.closest("[data-del]"),userDel=e.target.closest("[data-user-del]"),userPwdSave=e.target.closest("[data-user-pwd-save]"),deliver=e.target.closest("[data-deliver]"),mode=e.target.closest("[data-mode]"),act=e.target.closest("[data-action]"),tab=e.target.closest("[data-tab]");
-  if(add)addItem(add.dataset.add);
-  else if(deliver)deliverPO(deliver.dataset.deliver);
+document.addEventListener("click",e=>{const add=e.target.closest("[data-add]"),del=e.target.closest("[data-del]"),userDel=e.target.closest("[data-user-del]"),userPwdSave=e.target.closest("[data-user-pwd-save]"),deliver=e.target.closest("[data-deliver]"),reopen=e.target.closest("[data-reopen]"),mode=e.target.closest("[data-mode]"),act=e.target.closest("[data-action]"),tab=e.target.closest("[data-tab]");
+  if(add){e.preventDefault();addItem(add.dataset.add,e);}
+  else if(reopen)reopenClosed(reopen.dataset.reopen,e);
+  else if(deliver)deliverPO(deliver.dataset.deliver,e);
   else if(mode){reportMode=mode.dataset.mode;document.querySelectorAll(".mt").forEach(x=>x.classList.toggle("active",x.dataset.mode===reportMode));renderReport();}
   else if(userPwdSave)saveUserPassword(userPwdSave.dataset.userPwdSave);
   else if(userDel)deleteStaffUser(userDel.dataset.userDel,userDel.dataset.email);
@@ -744,17 +859,57 @@ document.addEventListener("click",e=>{const add=e.target.closest("[data-add]"),d
   else if(tab)switchTab(tab.dataset.tab);});
 document.getElementById("clientSelect").addEventListener("change",e=>{store.activeClientId=e.target.value;renderAll();save();switchTab("report");});
 
-function addItem(kind){
-  if(kind==="pos")data.pos.push({id:uid(),code:"PO-2026-0000",ndr:"",product:"New product",qty:"1×40′HC",value:0,incoterm:"FOB Qingdao",prod:0,insp:"Pending",inspDate:"",cargoReady:"TBD",eta:"TBD",port:"Santos",stage:"Confirmed"});
-  if(kind==="neg")data.neg.push({id:uid(),ref:"NEG-00",topic:"New topic",next:"define next step",owner:"Desk",due:"TBD",value:0,stage:"Quotation",outcome:"Open",samples:"N/A"});
+function addItem(kind,e){
+  if(e&&e.preventDefault)e.preventDefault();
+  if(kind==="pos"){
+    data.pos.push({id:uid(),code:"PO-2026-0000",ndr:"",product:"New product",qty:"1×40′HC",value:0,incoterm:"FOB Qingdao",prod:0,insp:"Pending",inspDate:"",cargoReady:"TBD",eta:"TBD",port:"Santos",stage:"Confirmed"});
+    requestAnimationFrame(function(){renderReport();renderManage();});
+    save().then(function(ok){
+      if(!ok)return;
+      useActive();renderManage();
+      alert("Purchase order added.\n\nFill in the client PO number — it stays in this tab until you click Mark delivered.");
+      switchTab("pos");
+    });
+    return;
+  }
+  if(kind==="neg")data.neg.push({id:uid(),ref:"NEG-00",topic:"New topic",next:"define next step",owner:"Desk",due:"TBD",value:0,stage:"Inquiry",outcome:"Open",samples:"N/A"});
   if(kind==="act")data.act.push({id:uid(),type:"gold",text:"New alert",owner:"Trading Desk"});
-  if(kind==="cl")data.closed.push({id:uid(),code:"PO-2026-0000",ndr:"",product:"New product",value:0,delivered:"TBD",port:"Santos"});
+  if(kind==="cl")data.closed.push({id:uid(),code:"",ndr:"",product:"Delivered product",value:0,delivered:"TBD",port:"Santos"});
   renderReport();renderManage();save();}
-function deliverPO(id){const i=data.pos.findIndex(p=>p.id===id);if(i<0)return;const p=data.pos[i];
+async function reopenClosed(id,e){
+  if(e&&e.preventDefault)e.preventDefault();
+  if(!data||!Array.isArray(data.closed))return;
+  const i=data.closed.findIndex(c=>c.id===id);if(i<0)return;
+  const c=data.closed[i];
+  const code=c.code||"this deal";
+  if(!confirm('Move "'+code+'" back to Purchase Orders?\n\nUse this if it was marked delivered by mistake.'))return;
+  data.pos.push({id:uid(),code:c.code,ndr:c.ndr||"",product:c.product,qty:"",value:Number(c.value)||0,incoterm:"",prod:0,insp:"Pending",inspDate:"",cargoReady:"",eta:"",port:c.port||"",stage:"Confirmed"});
+  data.closed.splice(i,1);
+  renderReport();renderManage();
+  const ok=await save();
+  if(ok){useActive();renderAll();alert('"'+code+'" is back in Purchase Orders.');switchTab("pos");}
+}
+async function deliverPO(id,e){
+  if(e&&e.preventDefault)e.preventDefault();
+  if(!data||!Array.isArray(data.pos))return;
+  const i=data.pos.findIndex(p=>p.id===id);if(i<0)return;
+  const p=data.pos[i];
+  if(!poDeliverReady(p)){alert("Enter the client PO number before marking as delivered.");return;}
+  const code=p.code||"this PO";
+  if(!confirm("Move purchase order \""+code+"\" to Closed?\n\nIt will leave Purchase Orders and appear under the Closed tab."))return;
   const d=new Date();const def=String(d.getDate()).padStart(2,"0")+" "+d.toLocaleString("en",{month:"short"})+" "+d.getFullYear();
-  const date=prompt("Mark "+(p.code||"this PO")+" as delivered.\n\nDelivered date (shown on the record):",def);if(date===null)return;
-  data.closed.unshift({id:uid(),code:p.code,ndr:p.ndr||"",product:p.product,value:Number(p.value)||0,delivered:(date.trim()||def),port:p.port});
-  data.pos.splice(i,1);renderReport();renderManage();save();}
+  const date=prompt("Mark "+code+" as delivered.\n\nDelivered date (shown on the record):",def);if(date===null)return;
+  const deliveredDate=(date.trim()||def);
+  data.closed.unshift({id:uid(),code:p.code,ndr:p.ndr||"",product:p.product,value:Number(p.value)||0,delivered:deliveredDate,port:p.port});
+  data.pos.splice(i,1);
+  renderReport();renderManage();
+  const ok=await save();
+  if(ok){
+    useActive();renderAll();
+    alert('Purchase order "'+code+'" marked as delivered on '+deliveredDate+'.\n\nIt is now in the Closed tab.');
+    switchTab("closed");
+  }
+}
 function switchTab(name){document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===name));document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-"+name));if(name==="report")requestAnimationFrame(fitReport);if(name==="users")loadStaffUsers();if(name==="assignments")loadAssignments();}
 function renderStaffUsers(users){
   const box=document.getElementById("list-users");if(!box)return;
@@ -867,12 +1022,12 @@ function doAction(a){
   else if(a==="import-template"){const el=document.createElement("a");el.href="/api/store/import-template";el.download="nandera-client-template.xlsx";document.body.appendChild(el);el.click();el.remove();}
   else if(a==="reset"){if(confirm("Reset ALL clients to the sample data? Current entries will be replaced.")){store=seedStore();renderAll();save();switchTab("report");}}
   else if(a==="logo-upload")document.getElementById("logoInput").click();
-  else if(a==="logo-remove"){store.logo=null;renderReport();renderManage();save();}
-  else if(a==="client-new"){const n=prompt("New client name:");if(n&&n.trim()){const c={id:uid(),data:blankData(n.trim())};store.clients.push(c);store.activeClientId=c.id;renderAll();Promise.resolve(save()).then(function(ok){if(!ok){store.clients=store.clients.filter(x=>x.id!==c.id);store.activeClientId=store.clients[0]?store.clients[0].id:"";renderAll();return;}renderAll();switchTab("settings");});}}
+  else if(a==="logo-remove"){data.meta.logo=null;renderReport();renderManage();save();}
+  else if(a==="client-new"){const n=prompt("New client name:");if(n&&n.trim()){const c={id:uid(),data:blankData(n.trim())};if(window.ASR_SELLER_PENDING_NEW)window.ASR_SELLER_PENDING_NEW.add(c.id);store.clients.push(c);store.activeClientId=c.id;renderAll();Promise.resolve(save()).then(function(ok){if(!ok){store.clients=store.clients.filter(x=>x.id!==c.id);if(window.ASR_SELLER_PENDING_NEW)window.ASR_SELLER_PENDING_NEW.delete(c.id);store.activeClientId=store.clients[0]?store.clients[0].id:"";renderAll();return;}renderAll();switchTab("settings");});}}
   else if(a==="client-rename"){if(!store.clients.length)return;const n=prompt("Rename client:",data.meta.client);if(n&&n.trim()){data.meta.client=n.trim();renderClientSelect();renderReport();renderManage();save();}}
   else if(a==="client-del"){if(store.clients.length<=1){alert("Keep at least one client.");return;}if(confirm('Delete client "'+data.meta.client+'" and all its entries?')){store.clients=store.clients.filter(c=>c.id!==store.activeClientId);store.activeClientId=store.clients[0].id;renderAll();save();switchTab("report");}}
 }
-document.getElementById("logoInput").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;try{store.logo=await resizeImage(f,300);renderReport();renderManage();save();}catch(err){alert("Couldn't read that image.");}e.target.value="";});
+document.getElementById("logoInput").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;try{data.meta.logo=await resizeImage(f,300);renderReport();renderManage();save();}catch(err){alert("Couldn't read that image.");}e.target.value="";});
 document.getElementById("fileImport").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;e.target.value="";
   const fd=new FormData();fd.append("file",f);
   try{
