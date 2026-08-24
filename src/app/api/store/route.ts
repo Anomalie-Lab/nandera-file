@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
 import { getAuthUser, requireAdmin, viewerPayload } from "@/lib/auth";
-import { loadStore, saveStore, scopeStoreForClient } from "@/lib/store-repository";
+import {
+  loadStore,
+  saveStore,
+  saveStoreForSeller,
+  scopeStoreForClient,
+  scopeStoreForSeller,
+} from "@/lib/store-repository";
 import { storeSchema } from "@/lib/validation";
 import { rateLimit } from "@/lib/rate-limit";
 import { migrateStore } from "@/lib/domain/normalize";
-import { isStaffRole } from "@/lib/users";
+import {
+  assignedClientIdsForSeller,
+  isGlobalStaffRole,
+  isStaffRole,
+} from "@/lib/users";
+import { prisma } from "@/lib/db";
 
 export async function GET() {
   const user = await getAuthUser();
@@ -25,6 +36,12 @@ export async function GET() {
     return NextResponse.json({ ...scoped, viewer: viewerPayload(user) });
   }
 
+  if (user.role === "SELLER") {
+    const ids = await assignedClientIdsForSeller(prisma, user.id);
+    const scoped = scopeStoreForSeller(store, ids);
+    return NextResponse.json({ ...scoped, viewer: viewerPayload(user) });
+  }
+
   return NextResponse.json({ ...store, viewer: viewerPayload(user) });
 }
 
@@ -34,7 +51,8 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
   const rl = rateLimit(`save:${ip}`, 120, 60_000);
   if (!rl.ok) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
@@ -61,6 +79,29 @@ export async function PUT(request: Request) {
   }
 
   const { viewer: _viewer, ...toSave } = parsed.data;
-  const saved = await saveStore(toSave);
-  return NextResponse.json({ ...saved, viewer: viewerPayload(admin) });
+
+  try {
+    if (admin.role === "SELLER") {
+      const ids = await assignedClientIdsForSeller(prisma, admin.id);
+      const saved = await saveStoreForSeller(toSave, ids, admin.id);
+      const idsAfter = await assignedClientIdsForSeller(prisma, admin.id);
+      return NextResponse.json({
+        ...scopeStoreForSeller(saved, idsAfter),
+        viewer: viewerPayload(admin),
+      });
+    }
+
+    if (!isGlobalStaffRole(admin.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const saved = await saveStore(toSave);
+    return NextResponse.json({ ...saved, viewer: viewerPayload(admin) });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Save failed";
+    if (/Forbidden/i.test(message)) {
+      return NextResponse.json({ error: message }, { status: 403 });
+    }
+    throw err;
+  }
 }

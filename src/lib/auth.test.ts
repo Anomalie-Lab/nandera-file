@@ -13,7 +13,7 @@ vi.mock("next/headers", () => ({
 import { prisma } from "@/lib/db";
 import { wipeDb } from "@/test/wipe-db";
 import { authenticate, getSessionOptions } from "@/lib/auth";
-import { nanderaAdmins, restoreOrCreateClientUser, usedLoginsSet } from "@/lib/users";
+import { nanderaAdmins, restoreOrCreateClientUser, SUPERADMIN_EMAIL, usedLoginsSet } from "@/lib/users";
 import { hashPassword } from "@/lib/passwords";
 
 describe("getSessionOptions", () => {
@@ -42,19 +42,21 @@ describe("authenticate", () => {
     await wipeDb();
   });
 
-  it("signs in a Nandera admin by email", async () => {
+  it("signs in a Nandera staff user by email as SELLER", async () => {
     const admin = nanderaAdmins().find((a) => a.email.startsWith("admin@"))!;
     const user = await authenticate(admin.email.toUpperCase(), admin.password);
     expect(user).not.toBeNull();
-    expect(user?.role).toBe("ADMIN");
+    expect(user?.role).toBe("SELLER");
     expect(user?.email).toBe(admin.email.toLowerCase());
     expect(user?.clientId).toBeNull();
   });
 
-  it("signs in every configured admin", async () => {
+  it("signs in every configured Nandera staff user", async () => {
     for (const admin of nanderaAdmins()) {
       const user = await authenticate(admin.email, admin.password);
-      expect(user?.role).toBe("ADMIN");
+      const expected =
+        admin.email.toLowerCase() === SUPERADMIN_EMAIL ? "SUPERADMIN" : "SELLER";
+      expect(user?.role).toBe(expected);
       expect(user?.email).toBe(admin.email);
       expect(user?.clientId).toBeNull();
     }

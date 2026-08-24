@@ -110,7 +110,7 @@ export const storeSchema = z
     }),
     viewer: z
       .object({
-        role: z.enum(["SUPERADMIN", "ADMIN", "CLIENT"]),
+        role: z.enum(["SUPERADMIN", "ADMIN", "SELLER", "CLIENT"]),
         canEdit: z.boolean(),
         user: z.string().default(""),
         email: z.string().default(""),

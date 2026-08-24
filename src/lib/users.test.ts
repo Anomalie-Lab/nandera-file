@@ -12,6 +12,7 @@ import {
   ensureSuperAdminRole,
   listStaffUsers,
   updateUserPassword,
+  updateStaffUserRole,
   migrateClientUsernames,
   nanderaAdmins,
   parseAdminList,
@@ -63,7 +64,7 @@ describe("admin and client users", () => {
     const second = await ensureAdminUsers(prisma);
     expect(second).toEqual([]);
     const admins = await prisma.user.findMany({
-      where: { role: { in: ["ADMIN", "SUPERADMIN"] } },
+      where: { role: { in: ["SELLER", "SUPERADMIN"] } },
     });
     expect(admins).toHaveLength(configured.length);
     for (const a of admins) {
@@ -72,7 +73,7 @@ describe("admin and client users", () => {
       const cred = configured.find((c) => c.email === a.email.toLowerCase());
       expect(a.passwordPlain).toBe(cred?.password ?? null);
       if (a.email === SUPERADMIN_EMAIL) expect(a.role).toBe("SUPERADMIN");
-      else expect(a.role).toBe("ADMIN");
+      else expect(a.role).toBe("SELLER");
     }
   });
 
@@ -216,6 +217,7 @@ describe("SUPERADMIN staff management", () => {
     const created = await createStaffUser(prisma, {
       email: "desk.ops@nandera.com",
       password: "StaffPass9",
+      role: "ADMIN",
     });
     expect(created.email).toBe("desk.ops@nandera.com");
     expect(created.role).toBe("ADMIN");
@@ -355,6 +357,7 @@ describe("SUPERADMIN staff management", () => {
     const staff = await createStaffUser(prisma, {
       email: "desk.ops@nandera.com",
       password: "StaffPass9",
+      role: "ADMIN",
     });
 
     await expect(
@@ -368,5 +371,57 @@ describe("SUPERADMIN staff management", () => {
     expect(
       await prisma.user.findUnique({ where: { email: "desk.ops@nandera.com" } })
     ).toBeNull();
+  });
+
+  it("updates staff role between ADMIN and SELLER and clears assignments", async () => {
+    await prisma.user.create({
+      data: {
+        email: SUPERADMIN_EMAIL,
+        passwordHash: hashPassword("test-pass-12"),
+        role: "SUPERADMIN",
+      },
+    });
+    const seller = await createStaffUser(prisma, {
+      email: "vendedor@nandera.com",
+      password: "SellerPass9",
+      role: "SELLER",
+    });
+    await prisma.client.create({
+      data: { id: "c1", client: "Cliente", sellerId: seller.id },
+    });
+
+    const asAdmin = await updateStaffUserRole(prisma, seller.id, "ADMIN");
+    expect(asAdmin.role).toBe("ADMIN");
+    expect(
+      (await prisma.client.findUnique({ where: { id: "c1" } }))?.sellerId
+    ).toBeNull();
+
+    const asSeller = await updateStaffUserRole(prisma, seller.id, "SELLER");
+    expect(asSeller.role).toBe("SELLER");
+
+    const owner = await prisma.user.findUnique({
+      where: { email: SUPERADMIN_EMAIL },
+    });
+    await expect(
+      updateStaffUserRole(prisma, owner!.id, "ADMIN")
+    ).rejects.toThrow(/SUPERADMIN/);
+  });
+
+  it("realigns NANDERA_ADMINS bootstrap users to SELLER on ensure", async () => {
+    const staff = nanderaAdmins().find(
+      (a) => a.email.toLowerCase() !== SUPERADMIN_EMAIL
+    );
+    if (!staff) return;
+    await prisma.user.create({
+      data: {
+        email: staff.email,
+        passwordHash: hashPassword(staff.password),
+        passwordPlain: staff.password,
+        role: "ADMIN",
+      },
+    });
+    await ensureAdminUsers(prisma);
+    const row = await prisma.user.findUnique({ where: { email: staff.email } });
+    expect(row?.role).toBe("SELLER");
   });
 });

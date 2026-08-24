@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, viewerPayload } from "@/lib/auth";
+import { requireGlobalStaff, viewerPayload } from "@/lib/auth";
 import { resetStore } from "@/lib/store-repository";
 import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
-  const admin = await requireAdmin();
+  const admin = await requireGlobalStaff();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

@@ -5,6 +5,7 @@ import {
   canManageUsers,
   ensureAdminUsers,
   ensureSuperAdminRole,
+  isGlobalStaffRole,
   isStaffRole,
   migrateClientUsernames,
   type Role,
@@ -12,7 +13,7 @@ import {
 import { safeVerifyPassword } from "./passwords";
 
 export type { Role };
-export { canManageUsers, isStaffRole };
+export { canManageUsers, isStaffRole, isGlobalStaffRole };
 
 export type SessionData = {
   authenticated?: boolean;
@@ -99,6 +100,13 @@ export async function requireAuth(): Promise<boolean> {
 export async function requireAdmin(): Promise<AuthUser | null> {
   const user = await getAuthUser();
   if (!user || !isStaffRole(user.role)) return null;
+  return user;
+}
+
+/** SUPERADMIN / ADMIN only — not SELLER (no import/reset/global ops). */
+export async function requireGlobalStaff(): Promise<AuthUser | null> {
+  const user = await getAuthUser();
+  if (!user || !isGlobalStaffRole(user.role)) return null;
   return user;
 }
 

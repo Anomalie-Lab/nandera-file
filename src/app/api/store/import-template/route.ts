@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireGlobalStaff } from "@/lib/auth";
 import {
   TEMPLATE_FILENAME,
   buildClientTemplateBuffer,
@@ -8,7 +8,7 @@ import {
 export const runtime = "nodejs";
 
 export async function GET() {
-  const admin = await requireAdmin();
+  const admin = await requireGlobalStaff();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

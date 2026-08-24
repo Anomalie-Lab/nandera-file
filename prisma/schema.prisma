@@ -18,6 +18,7 @@ model AppState {
 enum Role {
   SUPERADMIN
   ADMIN
+  SELLER
   CLIENT
 }
 
@@ -32,7 +33,10 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  client Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// Portal login for a single client (CLIENT role).
+  client      Client?  @relation("PortalUser", fields: [clientId], references: [id], onDelete: Cascade)
+  /// Clients this seller is responsible for (SELLER role).
+  soldClients Client[] @relation("ClientSeller")
 
   @@index([role])
 }
@@ -56,11 +60,17 @@ model Client {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  /// One seller allocated to this client (SUPERADMIN matrix, or auto on SELLER create).
+  sellerId String?
+  seller   User?   @relation("ClientSeller", fields: [sellerId], references: [id], onDelete: SetNull)
+
   purchaseOrders PurchaseOrder[]
   negotiations   Negotiation[]
   actions        ActionItem[]
   closedDeals    ClosedDeal[]
-  portalUser     User?
+  portalUser     User?           @relation("PortalUser")
+
+  @@index([sellerId])
 }
 
 model PurchaseOrder {
@@ -87,19 +97,19 @@ model PurchaseOrder {
 }
 
 model Negotiation {
-  id       String  @id
-  clientId String
-  ref      String  @default("")
-  topic    String  @default("")
-  next     String  @default("")
-  owner    String  @default("")
-  due      String  @default("")
-  value    Float   @default(0)
-  stage    String  @default("Inquiry")
-  outcome  String  @default("Open")
-  samples  String  @default("N/A")
-  wonPo    String?
-  sortOrder Int    @default(0)
+  id        String  @id
+  clientId  String
+  ref       String  @default("")
+  topic     String  @default("")
+  next      String  @default("")
+  owner     String  @default("")
+  due       String  @default("")
+  value     Float   @default(0)
+  stage     String  @default("Inquiry")
+  outcome   String  @default("Open")
+  samples   String  @default("N/A")
+  wonPo     String?
+  sortOrder Int     @default(0)
 
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 

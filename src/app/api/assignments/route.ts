@@ -4,15 +4,14 @@ import { requireSuperAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import {
-  UserAdminError,
-  createStaffUser,
-  listStaffUsers,
-} from "@/lib/users";
+  assignClientSeller,
+  listClientAssignments,
+} from "@/lib/assignments";
+import { listSellerUsers, UserAdminError } from "@/lib/users";
 
-const createSchema = z.object({
-  email: z.string().trim().min(3).max(200),
-  password: z.string().min(8).max(200),
-  role: z.enum(["ADMIN", "SELLER"]).optional(),
+const putSchema = z.object({
+  clientId: z.string().min(1).max(64),
+  sellerId: z.string().min(1).max(64).nullable(),
 });
 
 export async function GET() {
@@ -20,11 +19,14 @@ export async function GET() {
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const users = await listStaffUsers(prisma);
-  return NextResponse.json({ users });
+  const [assignments, sellers] = await Promise.all([
+    listClientAssignments(prisma),
+    listSellerUsers(prisma),
+  ]);
+  return NextResponse.json({ assignments, sellers });
 }
 
-export async function POST(request: Request) {
+export async function PUT(request: Request) {
   const admin = await requireSuperAdmin();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -32,7 +34,7 @@ export async function POST(request: Request) {
 
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-  const rl = rateLimit(`users-create:${ip}`, 20, 60_000);
+  const rl = rateLimit(`assignments:${ip}`, 60, 60_000);
   if (!rl.ok) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
   }
@@ -44,17 +46,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const parsed = createSchema.safeParse(body);
+  const parsed = putSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Email and password (min 8 characters) are required." },
+      { error: "clientId and sellerId (or null) are required." },
       { status: 400 }
     );
   }
 
   try {
-    const user = await createStaffUser(prisma, parsed.data);
-    return NextResponse.json({ user }, { status: 201 });
+    const assignment = await assignClientSeller(
+      prisma,
+      parsed.data.clientId,
+      parsed.data.sellerId
+    );
+    return NextResponse.json({ assignment });
   } catch (err) {
     if (err instanceof UserAdminError) {
       return NextResponse.json({ error: err.message }, { status: 400 });

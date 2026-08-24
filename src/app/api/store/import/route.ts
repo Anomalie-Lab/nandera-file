@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, viewerPayload } from "@/lib/auth";
+import { requireGlobalStaff, viewerPayload } from "@/lib/auth";
 import { importClientFromExcel } from "@/lib/store-repository";
 import { ExcelImportError, MAX_IMPORT_BYTES } from "@/lib/excel-client";
 import { rateLimit } from "@/lib/rate-limit";
@@ -7,7 +7,7 @@ import { rateLimit } from "@/lib/rate-limit";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const admin = await requireAdmin();
+  const admin = await requireGlobalStaff();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

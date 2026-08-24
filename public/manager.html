@@ -66,6 +66,24 @@ html:not(.role-superadmin) .tab[data-tab="users"],
 html:not(.role-superadmin) #panel-users,
 body:not(.role-superadmin) .tab[data-tab="users"],
 body:not(.role-superadmin) #panel-users{display:none!important}
+html:not(.role-superadmin) .tab[data-tab="assignments"],
+html:not(.role-superadmin) #panel-assignments,
+body:not(.role-superadmin) .tab[data-tab="assignments"],
+body:not(.role-superadmin) #panel-assignments{display:none!important}
+html.role-seller .clientbox [data-action="client-del"],
+body.role-seller .clientbox [data-action="client-del"],
+html.role-seller .tools [data-action="import"],
+body.role-seller .tools [data-action="import"],
+html.role-seller .tools [data-action="import-template"],
+body.role-seller .tools [data-action="import-template"],
+html.role-seller .tools [data-action="export"],
+body.role-seller .tools [data-action="export"],
+html.role-seller [data-action="reset"],
+body.role-seller [data-action="reset"],
+html.role-seller [data-action="import"],
+body.role-seller [data-action="import"],
+html.role-seller [data-action="import-template"],
+body.role-seller [data-action="import-template"]{display:none!important}
 
 .tabs{position:sticky;top:43px;z-index:39;background:var(--paper);border-bottom:1px solid var(--line);display:flex;gap:2px;padding:0 12px;overflow-x:auto}
 .tab{font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2.5px solid transparent;padding:11px 12px 9px;cursor:pointer;white-space:nowrap}
@@ -263,6 +281,7 @@ tr{break-inside:avoid}
   <button class="tab" data-tab="closed">Closed <span class="badge" id="b-cl">0</span></button>
   <button class="tab" data-tab="settings">Settings</button>
   <button class="tab" data-tab="users">Users</button>
+  <button class="tab" data-tab="assignments">Assignments</button>
 </div>
 
 <main id="main">
@@ -317,13 +336,18 @@ tr{break-inside:avoid}
   </section>
   <section class="panel" id="panel-users">
     <div class="add-bar"><h2>Users</h2><span class="count" id="c-users"></span></div>
-    <div class="panel-intro">Only <b>fernando.arenales@nandera.com</b> has role <b>SUPERADMIN</b>: create/delete staff, view and change <b>all</b> passwords (staff + client portal). New staff accounts are <b>ADMIN</b>.</div>
+    <div class="panel-intro">Only <b>fernando.arenales@nandera.com</b> (SUPERADMIN) creates staff and can change roles (ADMIN ↔ SELLER). <b>SELLER</b> users see/edit their assigned clients and can create new ones (auto-assigned to them). <b>ADMIN</b> sees all clients. Assign sellers in the <b>Assignments</b> tab.</div>
     <div class="mcard"><div class="ttl"><span class="idx">+</span><span class="name">Create staff user</span></div>
-      <div class="grid"><div class="f"><label>Email</label><input id="newUserEmail" placeholder="nome@nandera.com" autocomplete="off"></div><div class="f"><label>Password</label><input id="newUserPassword" type="password" autocomplete="new-password"></div></div>
-      <button class="add-btn" data-action="user-create" style="margin-top:10px">Create ADMIN user</button>
+      <div class="grid"><div class="f"><label>Email</label><input id="newUserEmail" placeholder="nome@nandera.com" autocomplete="off"></div><div class="f"><label>Password</label><input id="newUserPassword" type="password" autocomplete="new-password"></div><div class="f"><label>Role</label><select id="newUserRole"><option value="SELLER">SELLER (vendedor)</option><option value="ADMIN">ADMIN (vê todos)</option></select></div></div>
+      <button class="add-btn" data-action="user-create" style="margin-top:10px">Create user</button>
       <div class="hint">Email must be @nandera.com. Minimum 8 characters for the password.</div>
     </div>
     <div id="list-users"></div>
+  </section>
+  <section class="panel" id="panel-assignments">
+    <div class="add-bar"><h2>Assignments</h2><span class="count" id="c-assignments"></span></div>
+    <div class="panel-intro">Each client has <b>one seller</b>. The seller can edit that client's report and create new clients (auto-assigned). Unassigned clients are only visible to SUPERADMIN / ADMIN.</div>
+    <div id="list-assignments"></div>
   </section>
 </main>
 
@@ -367,9 +391,12 @@ tr{break-inside:avoid}
   function applyViewerMode(viewer) {
     window.ASR_VIEWER = viewer || { role: "ADMIN", canEdit: true, canManageUsers: false, user: "", email: "" };
     const client = window.ASR_VIEWER.role === "CLIENT";
+    const seller = window.ASR_VIEWER.role === "SELLER";
     const superadmin = Boolean(window.ASR_VIEWER.canManageUsers);
     document.documentElement.classList.toggle("role-client", client);
     document.body && document.body.classList.toggle("role-client", client);
+    document.documentElement.classList.toggle("role-seller", seller);
+    document.body && document.body.classList.toggle("role-seller", seller);
     document.documentElement.classList.toggle("role-superadmin", superadmin);
     document.body && document.body.classList.toggle("role-superadmin", superadmin);
     if (client) {
@@ -460,16 +487,17 @@ function andes(){const d=blankData("Andes Importações S.A.");d.meta.period="Ju
   d.neg=[{id:uid(),ref:"NEG-11",topic:"Compostable cups — trial order",next:"send samples",owner:"Desk",due:"12 Aug",value:90000,stage:"Inquiry",outcome:"Open",samples:"Requested"}];
   d.closed=[{id:uid(),code:"PO-2026-0198",ndr:"NDR-2580",product:"Kraft bags",value:39900,delivered:"22 Jul",port:"Valparaíso"}];return d;}
 function seedStore(){const c1={id:uid(),data:ventoSul()},c2={id:uid(),data:andes()};return {activeClientId:c1.id,clients:[c1,c2],logo:null,settings:{deliveredMode:"Hidden"}};}
+function emptyStore(){return {activeClientId:"",clients:[],logo:null,settings:{deliveredMode:"Hidden"}};}
 
-let store=seedStore(),data;
-function useActive(){const c=store.clients.find(c=>c.id===store.activeClientId)||store.clients[0];store.activeClientId=c.id;data=c.data;}
-async function save(){try{if(window.storage&&window.storage.set){const saved=await window.storage.set(KEY,JSON.stringify(store));mergeSavedMeta(saved);}}catch(e){}const t=document.getElementById("savedTag");t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1100);}
+let store=emptyStore(),data;
+function useActive(){if(!store.clients.length){data=blankData("");return;}const c=store.clients.find(c=>c.id===store.activeClientId)||store.clients[0];store.activeClientId=c.id;data=c.data;}
+async function save(){let ok=true;try{if(window.storage&&window.storage.set){const saved=await window.storage.set(KEY,JSON.stringify(store));if(saved&&Array.isArray(saved.clients)){const keep=store.activeClientId;const mg=migrateStore(saved);if(mg){store=mg;if(keep&&store.clients.some(c=>c.id===keep))store.activeClientId=keep;}}else{mergeSavedMeta(saved);}}}catch(e){ok=false;if(e&&e.message)alert(e.message);}const t=document.getElementById("savedTag");if(ok){t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1100);}return ok;}
 async function load(){try{if(window.storage&&window.storage.get){const r=await window.storage.get(KEY);if(r&&r.value)return JSON.parse(r.value);}}catch(e){}return null;}
 function normalize(d){d.meta=d.meta||{};d.kpi=d.kpi||{};["pos","neg","act","closed"].forEach(k=>d[k]=d[k]||[]);
   d.pos.forEach(p=>{if(p.insp===undefined){const q=p.qc||"pending";p.insp=q==="passed"?"Passed":q==="pending"?"Pending":"Booked";p.inspDate=(p.insp==="Booked"&&p.qcLabel)?String(p.qcLabel).replace(/^[A-Za-z ]*/,"").trim():"";}if(p.inspDate===undefined)p.inspDate="";if(p.ndr===undefined)p.ndr="";if(p.stage==="Booked/Loaded")p.stage="Loaded";if(p.stage==="Delivered / Closed")p.stage="Arrived";delete p.qc;delete p.qcLabel;});
   d.neg.forEach(n=>{if(n.outcome===undefined)n.outcome="Open";if(n.samples===undefined)n.samples="N/A";if(n.stage==="Quotation")n.stage="Inquiry";if(n.stage==="Negotiation")n.stage="Proposal";});
   d.closed.forEach(c=>{if(c.value==null)c.value=0;if(c.ndr===undefined)c.ndr="";});return d;}
-function migrateStore(obj){if(obj&&Array.isArray(obj.clients)){if(obj.logo===undefined)obj.logo=null;if(!obj.settings)obj.settings={deliveredMode:"Hidden"};if(!obj.settings.deliveredMode)obj.settings.deliveredMode="Hidden";obj.clients.forEach(c=>{c.id=c.id||uid();normalize(c.data);});if(!obj.clients.find(c=>c.id===obj.activeClientId))obj.activeClientId=obj.clients[0].id;return obj;}
+function migrateStore(obj){if(obj&&Array.isArray(obj.clients)){if(obj.logo===undefined)obj.logo=null;if(!obj.settings)obj.settings={deliveredMode:"Hidden"};if(!obj.settings.deliveredMode)obj.settings.deliveredMode="Hidden";obj.clients.forEach(c=>{c.id=c.id||uid();normalize(c.data);});if(obj.clients.length&&!obj.clients.find(c=>c.id===obj.activeClientId))obj.activeClientId=obj.clients[0].id;if(!obj.clients.length)obj.activeClientId="";return obj;}
   if(obj&&Array.isArray(obj.pos))return {activeClientId:"m",clients:[{id:"m",data:normalize(obj)}],logo:null,settings:{deliveredMode:"Hidden"}};return null;}
 
 function esc(s){return (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
@@ -684,7 +712,7 @@ function renderOverview(){
     c.data.neg.forEach(n=>{ph+=`<tr><td class="ovcli">${esc(c.data.meta.client)}</td><td>${inp("neg",n.id,"ref",n.ref)}</td><td>${inp("neg",n.id,"topic",n.topic)}</td><td>${inp("neg",n.id,"value",n.value)}</td><td>${sel("neg",n.id,"stage",NEG_STAGES,n.stage)}</td><td>${sel("neg",n.id,"outcome",NEG_OUTCOMES,n.outcome||"Open")}</td><td>${sel("neg",n.id,"samples",NEG_SAMPLES,n.samples||"N/A")}</td><td>${inp("neg",n.id,"next",n.next)}</td><td>${inp("neg",n.id,"due",n.due)}</td></tr>`;});});
   ph+=`</tbody></table>`;document.getElementById("ov-pipeline").innerHTML=ph;
 }
-function renderClientSelect(){document.getElementById("clientSelect").innerHTML=store.clients.map(c=>`<option value="${c.id}" ${c.id===store.activeClientId?"selected":""}>${esc(c.data.meta.client||"Untitled")}</option>`).join("");}
+function renderClientSelect(){const el=document.getElementById("clientSelect");if(!store.clients.length){el.innerHTML='<option value="">No clients yet — click ＋</option>';return;}el.innerHTML=store.clients.map(c=>`<option value="${c.id}" ${c.id===store.activeClientId?"selected":""}>${esc(c.data.meta.client||"Untitled")}</option>`).join("");}
 function renderAll(){useActive();renderClientSelect();renderReport();renderManage();}
 
 function makeDraftPO(neg){return {id:uid(),code:"",ndr:"",product:neg.topic||"Won deal",qty:"",value:Number(neg.value)||0,incoterm:"",prod:0,insp:"Pending",inspDate:"",cargoReady:"",eta:"",port:"",stage:"Confirmed"};}
@@ -699,7 +727,10 @@ function setField(entity,id,f,v){
 }
 const main=document.getElementById("main");
 main.addEventListener("input",e=>{const t=e.target;if(!t.dataset.entity)return;setField(t.dataset.entity,t.dataset.id,t.dataset.field,t.value);renderReport();save();});
-main.addEventListener("change",e=>{const t=e.target;if(!t.dataset.entity||t.tagName!=="SELECT")return;setField(t.dataset.entity,t.dataset.id,t.dataset.field,t.value);renderReport();renderManage();save();
+main.addEventListener("change",e=>{const t=e.target;
+  if(t&&t.dataset&&t.dataset.assignClient){saveAssignment(t.dataset.assignClient,t.value||null);return;}
+  if(t&&t.dataset&&t.dataset.userRole){saveUserRole(t.dataset.userRole,t.value);return;}
+  if(!t.dataset.entity||t.tagName!=="SELECT")return;setField(t.dataset.entity,t.dataset.id,t.dataset.field,t.value);renderReport();renderManage();save();
   if(pendingWonAlert){const r=pendingWonAlert;pendingWonAlert=null;setTimeout(()=>alert('"'+r+'" marked Won.\n\nA draft PO was created in Purchase Orders (value & product pre-filled) — open it to add the PO number and remaining details.'),40);}});
 
 document.addEventListener("click",e=>{const add=e.target.closest("[data-add]"),del=e.target.closest("[data-del]"),userDel=e.target.closest("[data-user-del]"),userPwdSave=e.target.closest("[data-user-pwd-save]"),deliver=e.target.closest("[data-deliver]"),mode=e.target.closest("[data-mode]"),act=e.target.closest("[data-action]"),tab=e.target.closest("[data-tab]");
@@ -724,19 +755,53 @@ function deliverPO(id){const i=data.pos.findIndex(p=>p.id===id);if(i<0)return;co
   const date=prompt("Mark "+(p.code||"this PO")+" as delivered.\n\nDelivered date (shown on the record):",def);if(date===null)return;
   data.closed.unshift({id:uid(),code:p.code,ndr:p.ndr||"",product:p.product,value:Number(p.value)||0,delivered:(date.trim()||def),port:p.port});
   data.pos.splice(i,1);renderReport();renderManage();save();}
-function switchTab(name){document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===name));document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-"+name));if(name==="report")requestAnimationFrame(fitReport);if(name==="users")loadStaffUsers();}
+function switchTab(name){document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===name));document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-"+name));if(name==="report")requestAnimationFrame(fitReport);if(name==="users")loadStaffUsers();if(name==="assignments")loadAssignments();}
 function renderStaffUsers(users){
   const box=document.getElementById("list-users");if(!box)return;
   const count=document.getElementById("c-users");if(count)count.textContent=(users||[]).length+" user(s)";
   if(!users||!users.length){box.innerHTML='<div class="hint">No users.</div>';return;}
   box.innerHTML=users.map(u=>{
-    const del=u.canDelete?`<button class="del" data-user-del="${esc(u.id)}" data-email="${esc(u.email)}">Delete</button>`:`<span class="hint" style="margin-left:auto">${u.role==="CLIENT"?"Portal login":u.role==="SUPERADMIN"?"Cannot delete":"Cannot delete"}</span>`;
-    const idx=u.role==="SUPERADMIN"?"★":u.role==="ADMIN"?"@":"◦";
+    const del=u.canDelete?`<button class="del" data-user-del="${esc(u.id)}" data-email="${esc(u.email)}">Delete</button>`:`<span class="hint" style="margin-left:auto">${u.role==="CLIENT"?"Portal login":"Cannot delete"}</span>`;
+    const idx=u.role==="SUPERADMIN"?"★":u.role==="SELLER"?"S":u.role==="ADMIN"?"@":"◦";
     const sub=u.role==="CLIENT"&&u.clientName?`<div class="hint">Client: ${esc(u.clientName)}</div>`:"";
-    const cred=`<div class="credbox" style="grid-template-columns:1fr auto;align-items:end;margin-top:8px"><div class="f"><label>Password</label><input data-user-pwd="${esc(u.id)}" value="${esc(u.password||"")}" autocomplete="off"></div><div class="f"><label>&nbsp;</label><button class="add-btn" data-user-pwd-save="${esc(u.id)}" style="padding:9px 14px;width:auto;white-space:nowrap">Save</button></div></div>`;
+    const roleCtrl=u.canDelete
+      ?`<div class="f"><label>Role</label><select data-user-role="${esc(u.id)}"><option value="SELLER" ${u.role==="SELLER"?"selected":""}>SELLER</option><option value="ADMIN" ${u.role==="ADMIN"?"selected":""}>ADMIN</option></select></div>`
+      :`<div class="f"><label>Role</label><input value="${esc(u.role)}" disabled></div>`;
+    const cred=`<div class="credbox" style="grid-template-columns:1fr 140px auto;align-items:end;margin-top:8px">${roleCtrl}<div class="f"><label>Password</label><input data-user-pwd="${esc(u.id)}" value="${esc(u.password||"")}" autocomplete="off"></div><div class="f"><label>&nbsp;</label><button class="add-btn" data-user-pwd-save="${esc(u.id)}" style="padding:9px 14px;width:auto;white-space:nowrap">Save</button></div></div>`;
     return `<div class="mcard"><div class="ttl"><span class="idx">${idx}</span><span class="name">${esc(u.email)}</span><span class="tagoc oc-Open">${esc(u.role)}</span>${del}</div>
       ${sub}${cred}<div class="hint">Created ${esc((u.createdAt||"").slice(0,10)||"—")}</div></div>`;
   }).join("");
+}
+function renderAssignments(assignments,sellers){
+  const box=document.getElementById("list-assignments");if(!box)return;
+  const count=document.getElementById("c-assignments");if(count)count.textContent=(assignments||[]).length+" client(s)";
+  if(!assignments||!assignments.length){box.innerHTML='<div class="hint">No clients yet.</div>';return;}
+  if(!(sellers||[]).length){
+    box.innerHTML='<div class="hint">Create a <b>SELLER</b> user in the Users tab first, then assign clients here.</div>'+assignments.map(a=>`<div class="mcard"><div class="ttl"><span class="idx">◦</span><span class="name">${esc(a.clientName)}</span></div><div class="hint">No sellers available</div></div>`).join("");
+    return;
+  }
+  box.innerHTML=assignments.map(a=>{
+    const options=['<option value="">— Unassigned —</option>'].concat((sellers||[]).map(s=>`<option value="${esc(s.id)}" ${a.sellerId===s.id?"selected":""}>${esc(s.email)}</option>`)).join("");
+    return `<div class="mcard"><div class="ttl"><span class="idx">◦</span><span class="name">${esc(a.clientName)}</span></div>
+      <div class="grid"><div class="f"><label>Seller</label><select data-assign-client="${esc(a.clientId)}">${options}</select></div></div></div>`;
+  }).join("");
+}
+async function loadAssignments(){
+  if(!window.ASR_VIEWER||!window.ASR_VIEWER.canManageUsers)return;
+  try{
+    const res=await fetch("/api/assignments",{credentials:"same-origin"});
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(j.error||"Could not load assignments");
+    renderAssignments(j.assignments||[],j.sellers||[]);
+  }catch(err){alert(err&&err.message?err.message:"Could not load assignments.");}
+}
+async function saveAssignment(clientId,sellerId){
+  try{
+    const res=await fetch("/api/assignments",{method:"PUT",credentials:"same-origin",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({clientId,sellerId:sellerId||null})});
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(j.error||"Could not save assignment");
+    await loadAssignments();
+  }catch(err){alert(err&&err.message?err.message:"Could not save assignment.");await loadAssignments();}
 }
 async function saveUserPassword(id){
   if(!id)return;
@@ -751,6 +816,15 @@ async function saveUserPassword(id){
     alert("Password updated for "+(j.user&&j.user.email||"user")+".");
   }catch(err){alert(err&&err.message?err.message:"Could not update password.");}
 }
+async function saveUserRole(id,role){
+  if(!id||(role!=="ADMIN"&&role!=="SELLER"))return;
+  try{
+    const res=await fetch("/api/users/"+encodeURIComponent(id),{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({role})});
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(j.error||"Could not update role");
+    await loadStaffUsers();
+  }catch(err){alert(err&&err.message?err.message:"Could not update role.");await loadStaffUsers();}
+}
 async function loadStaffUsers(){
   if(!window.ASR_VIEWER||!window.ASR_VIEWER.canManageUsers)return;
   try{
@@ -763,14 +837,15 @@ async function loadStaffUsers(){
 async function createStaffUserFromForm(){
   const email=(document.getElementById("newUserEmail")||{}).value||"";
   const password=(document.getElementById("newUserPassword")||{}).value||"";
+  const role=(document.getElementById("newUserRole")||{}).value||"SELLER";
   try{
-    const res=await fetch("/api/users",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({email:email.trim(),password})});
+    const res=await fetch("/api/users",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({email:email.trim(),password,role})});
     const j=await res.json().catch(()=>({}));
     if(!res.ok)throw new Error(j.error||"Could not create user");
     document.getElementById("newUserEmail").value="";
     document.getElementById("newUserPassword").value="";
     await loadStaffUsers();
-    alert("User created: "+(j.user&&j.user.email||email)+"\nRole: ADMIN");
+    alert("User created: "+(j.user&&j.user.email||email)+"\nRole: "+(j.user&&j.user.role||role));
   }catch(err){alert(err&&err.message?err.message:"Could not create user.");}
 }
 async function deleteStaffUser(id,email){
@@ -793,8 +868,8 @@ function doAction(a){
   else if(a==="reset"){if(confirm("Reset ALL clients to the sample data? Current entries will be replaced.")){store=seedStore();renderAll();save();switchTab("report");}}
   else if(a==="logo-upload")document.getElementById("logoInput").click();
   else if(a==="logo-remove"){store.logo=null;renderReport();renderManage();save();}
-  else if(a==="client-new"){const n=prompt("New client name:");if(n&&n.trim()){const c={id:uid(),data:blankData(n.trim())};store.clients.push(c);store.activeClientId=c.id;renderAll();Promise.resolve(save()).then(function(){renderAll();switchTab("settings");});}}
-  else if(a==="client-rename"){const n=prompt("Rename client:",data.meta.client);if(n&&n.trim()){data.meta.client=n.trim();renderClientSelect();renderReport();renderManage();save();}}
+  else if(a==="client-new"){const n=prompt("New client name:");if(n&&n.trim()){const c={id:uid(),data:blankData(n.trim())};store.clients.push(c);store.activeClientId=c.id;renderAll();Promise.resolve(save()).then(function(ok){if(!ok){store.clients=store.clients.filter(x=>x.id!==c.id);store.activeClientId=store.clients[0]?store.clients[0].id:"";renderAll();return;}renderAll();switchTab("settings");});}}
+  else if(a==="client-rename"){if(!store.clients.length)return;const n=prompt("Rename client:",data.meta.client);if(n&&n.trim()){data.meta.client=n.trim();renderClientSelect();renderReport();renderManage();save();}}
   else if(a==="client-del"){if(store.clients.length<=1){alert("Keep at least one client.");return;}if(confirm('Delete client "'+data.meta.client+'" and all its entries?')){store.clients=store.clients.filter(c=>c.id!==store.activeClientId);store.activeClientId=store.clients[0].id;renderAll();save();switchTab("report");}}
 }
 document.getElementById("logoInput").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;try{store.logo=await resizeImage(f,300);renderReport();renderManage();save();}catch(err){alert("Couldn't read that image.");}e.target.value="";});
@@ -836,6 +911,10 @@ document.addEventListener("DOMContentLoaded", function () {
       if (me && me.role === "CLIENT") {
         document.documentElement.classList.add("role-client");
         document.body.classList.add("role-client");
+      }
+      if (me && me.role === "SELLER") {
+        document.documentElement.classList.add("role-seller");
+        document.body.classList.add("role-seller");
       }
       if (me && me.canManageUsers) {
         document.documentElement.classList.add("role-superadmin");

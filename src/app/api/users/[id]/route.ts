@@ -3,11 +3,21 @@ import { z } from "zod";
 import { requireSuperAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
-import { UserAdminError, deleteStaffUser, updateUserPassword } from "@/lib/users";
+import {
+  UserAdminError,
+  deleteStaffUser,
+  updateStaffUserRole,
+  updateUserPassword,
+} from "@/lib/users";
 
-const patchSchema = z.object({
-  password: z.string().min(8).max(200),
-});
+const patchSchema = z
+  .object({
+    password: z.string().min(8).max(200).optional(),
+    role: z.enum(["ADMIN", "SELLER"]).optional(),
+  })
+  .refine((d) => d.password !== undefined || d.role !== undefined, {
+    message: "Provide password and/or role.",
+  });
 
 export async function PATCH(
   request: Request,
@@ -40,13 +50,19 @@ export async function PATCH(
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Password must be between 8 and 200 characters." },
+      { error: "Provide a valid password (min 8) and/or role (ADMIN|SELLER)." },
       { status: 400 }
     );
   }
 
   try {
-    const user = await updateUserPassword(prisma, id, parsed.data.password);
+    let user =
+      parsed.data.password !== undefined
+        ? await updateUserPassword(prisma, id, parsed.data.password)
+        : null;
+    if (parsed.data.role !== undefined) {
+      user = await updateStaffUserRole(prisma, id, parsed.data.role);
+    }
     return NextResponse.json({ user });
   } catch (err) {
     if (err instanceof UserAdminError) {

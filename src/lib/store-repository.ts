@@ -170,7 +170,10 @@ export async function loadStore(opts?: {
 }
 
 /** Replace entire DB content with store (transactional). */
-export async function saveStore(input: Store): Promise<Store> {
+export async function saveStore(
+  input: Store,
+  opts?: { assignSellerIdForNewClients?: string }
+): Promise<Store> {
   const migrated = migrateStore(input);
   if (!migrated) throw new Error("Invalid store payload");
 
@@ -192,6 +195,7 @@ export async function saveStore(input: Store): Promise<Store> {
       {
         lastModified: c.lastModified,
         fingerprint: fingerprintClientData(toClientData(c as DbClient)),
+        sellerId: c.sellerId,
       },
     ])
   );
@@ -249,6 +253,9 @@ export async function saveStore(input: Store): Promise<Store> {
           transitFoot: k.transitFoot || "",
           sortOrder: ci,
           lastModified,
+          sellerId: prev
+            ? prev.sellerId
+            : opts?.assignSellerIdForNewClients ?? null,
           purchaseOrders: {
             create: c.data.pos.map((p, i) => ({
               id: p.id,
@@ -361,4 +368,88 @@ export function scopeStoreForClient(store: Store, clientId: string): Store {
       return copy;
     }),
   };
+}
+
+export function scopeStoreForSeller(
+  store: Store,
+  allowedClientIds: string[]
+): Store {
+  const allowed = new Set(allowedClientIds);
+  const mine = store.clients.filter((c) => allowed.has(c.id));
+  return {
+    ...store,
+    activeClientId: mine.some((c) => c.id === store.activeClientId)
+      ? store.activeClientId
+      : mine[0]?.id || "",
+    clients: mine,
+  };
+}
+
+/**
+ * Seller save: merge assigned clients; allow creating new ones (auto-assigned).
+ * Prevents wiping/editing other sellers' clients (saveStore replaces all rows).
+ * Sellers cannot delete clients — the global set is kept, only new ids are appended.
+ * At most one new client per save (blocks accidental seed/sample dumps).
+ */
+export async function saveStoreForSeller(
+  input: Store,
+  allowedClientIds: string[],
+  sellerUserId: string
+): Promise<Store> {
+  const allowed = new Set(allowedClientIds);
+  const migrated = migrateStore(input);
+  if (!migrated) throw new Error("Invalid store payload");
+
+  const full = await loadStore({ includeAccess: true });
+  const existingIds = new Set(full.clients.map((c) => c.id));
+
+  for (const c of migrated.clients) {
+    if (allowed.has(c.id) || !existingIds.has(c.id)) continue;
+    throw new Error(
+      "Forbidden: cannot modify a client that is not assigned to you."
+    );
+  }
+
+  const created = migrated.clients.filter((c) => !existingIds.has(c.id));
+  if (created.length > 1) {
+    throw new Error("Forbidden: create one client at a time.");
+  }
+  for (const c of created) {
+    const name = (c.data.meta.client || "").trim().toLowerCase();
+    if (
+      name &&
+      full.clients.some(
+        (x) => x.data.meta.client.trim().toLowerCase() === name
+      )
+    ) {
+      throw new Error(
+        `A client named "${c.data.meta.client.trim()}" already exists.`
+      );
+    }
+  }
+
+  const byId = new Map(full.clients.map((c) => [c.id, c]));
+  for (const c of migrated.clients) {
+    if (allowed.has(c.id) || !existingIds.has(c.id)) {
+      byId.set(c.id, c);
+    }
+  }
+
+  const createdIds = new Set(created.map((c) => c.id));
+  const merged: Store = {
+    ...full,
+    activeClientId:
+      allowed.has(migrated.activeClientId) ||
+      createdIds.has(migrated.activeClientId)
+        ? migrated.activeClientId
+        : full.activeClientId,
+    logo: migrated.logo ?? full.logo,
+    settings: migrated.settings || full.settings,
+    clients: [
+      ...full.clients.map((c) => byId.get(c.id) || c),
+      ...created,
+    ],
+  };
+
+  return saveStore(merged, { assignSellerIdForNewClients: sellerUserId });
 }

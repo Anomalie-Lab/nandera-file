@@ -137,7 +137,7 @@ export type ClientRecord = {
 };
 
 export type Viewer = {
-  role: "SUPERADMIN" | "ADMIN" | "CLIENT";
+  role: "SUPERADMIN" | "ADMIN" | "SELLER" | "CLIENT";
   canEdit: boolean;
   canManageUsers?: boolean;
   user: string;
