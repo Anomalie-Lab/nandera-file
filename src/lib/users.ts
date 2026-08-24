@@ -313,7 +313,7 @@ function toManagedUser(
  * Leaving SELLER clears that user's client assignments.
  */
 export async function updateStaffUserRole(
-  db: Db,
+  db: PrismaClient,
   id: string,
   role: "ADMIN" | "SELLER"
 ): Promise<ManagedUser> {
@@ -334,7 +334,7 @@ export async function updateStaffUserRole(
     return toManagedUser(row);
   }
 
-  const updated = await db.$transaction(async (tx) => {
+  const updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
     if (row.role === "SELLER" && role === "ADMIN") {
       await tx.client.updateMany({
         where: { sellerId: id },
