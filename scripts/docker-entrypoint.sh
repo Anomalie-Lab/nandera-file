@@ -107,9 +107,19 @@ shutdown() {
 }
 trap shutdown TERM INT
 
-echo "Starting Prisma Studio on 0.0.0.0:${PRISMA_STUDIO_PORT}"
-npx prisma studio --hostname 0.0.0.0 --port "$PRISMA_STUDIO_PORT" --browser none &
-studio=$!
+ENABLE_PRISMA_STUDIO="${ENABLE_PRISMA_STUDIO:-1}"
+case "$ENABLE_PRISMA_STUDIO" in
+  0|false|FALSE|no|NO) ENABLE_PRISMA_STUDIO=0 ;;
+  *) ENABLE_PRISMA_STUDIO=1 ;;
+esac
+
+if [ "$ENABLE_PRISMA_STUDIO" -eq 1 ]; then
+  echo "Starting Prisma Studio on 0.0.0.0:${PRISMA_STUDIO_PORT}"
+  npx prisma studio --hostname 0.0.0.0 --port "$PRISMA_STUDIO_PORT" --browser none &
+  studio=$!
+else
+  echo "Prisma Studio disabled (ENABLE_PRISMA_STUDIO=0)"
+fi
 
 npx next start -H "$HOSTNAME" -p "$PORT" &
 app=$!

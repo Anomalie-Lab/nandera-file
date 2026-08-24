@@ -1,0 +1,54 @@
+# Deploy na mesma VM do nandera normal, compartilhando o Traefik existente.
+#
+# Antes de subir, na VM, descubra a rede e o cert resolver do nandera normal:
+#   docker ps --format '{{.Names}}' | grep -i nandera
+#   docker inspect <container-nandera-normal> --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+#   docker inspect <container-nandera-normal> --format '{{range $k,$v := .Config.Labels}}{{$k}}={{$v}}{{"\n"}}{{end}}' | grep traefik
+#
+# Copie TRAEFIK_NETWORK e TRAEFIK_CERT_RESOLVER para o .env.
+#
+# Volume nandera_pg: reutiliza o volume já existente deste projeto (dados preservados).
+# Banco isolado do nandera normal: Postgres próprio dentro deste container + volume separado.
+#
+# Porta no host (pouco comum; HTTPS principal via Traefik):
+#   38417 -> app (acesso direto IP:38417, opcional)
+# Postgres e Prisma Studio ficam só dentro do container (sem exposição).
+
+services:
+  nandera-file:
+    container_name: nandera-file
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      SESSION_SECURE: "true"
+      ENABLE_PRISMA_STUDIO: "0"
+      POSTGRES_LISTEN_ADDRESSES: "127.0.0.1"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nandera}
+      POSTGRES_USER: ${POSTGRES_USER:-nandera}
+      POSTGRES_DB: ${POSTGRES_DB:-nandera}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nandera}:${POSTGRES_PASSWORD:-nandera}@127.0.0.1:5432/${POSTGRES_DB:-nandera}
+    ports:
+      - "${HOST_APP_PORT:-38417}:3000"
+    volumes:
+      - nandera_pg:/var/lib/postgresql/data
+    networks:
+      - traefik
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK:-nandera-prod_edge}
+      - traefik.http.routers.nandera-file.rule=Host(`${TRAEFIK_HOST:-system.nandera.com}`)
+      - traefik.http.routers.nandera-file.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
+      - traefik.http.routers.nandera-file.tls=true
+      - traefik.http.routers.nandera-file.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-le}
+      - traefik.http.services.nandera-file.loadbalancer.server.port=3000
+
+networks:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK:-nandera-prod_edge}
+
+volumes:
+  nandera_pg:
+    name: nandera_pg
