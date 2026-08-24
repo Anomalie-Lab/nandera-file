@@ -40,7 +40,7 @@ services:
       - traefik.docker.network=${TRAEFIK_NETWORK:-nandera-prod_edge}
       - traefik.http.routers.nandera-file.rule=Host(`${TRAEFIK_HOST:-system.nandera.com}`)
       - traefik.http.routers.nandera-file.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
-      - traefik.http.routers.nandera-file.tls=true
+      - traefik.http.routers.nandera-file.service=nandera-file
       - traefik.http.routers.nandera-file.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-le}
       - traefik.http.services.nandera-file.loadbalancer.server.port=3000
 
