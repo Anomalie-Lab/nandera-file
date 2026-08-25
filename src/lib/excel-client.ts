@@ -158,7 +158,7 @@ const POS_COLS = [
   },
   {
     key: "cargoReady",
-    header: "Cargo ready / ETD",
+    header: "Cargo ready",
     aliases: ["cargo ready", "cargo ready etd"],
   },
   { key: "eta", header: "ETA", aliases: [] },
