@@ -399,7 +399,7 @@ export async function updateStaffUserRole(
     }
     return tx.user.update({
       where: { id },
-      data: { role, clientId: role === "CLIENT" ? row.clientId : null },
+      data: { role, clientId: null },
       include: { client: { select: { client: true } } },
     });
   });
