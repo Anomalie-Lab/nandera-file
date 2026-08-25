@@ -2,6 +2,7 @@ import { getIronSession, type SessionOptions } from "iron-session";
 import { cookies } from "next/headers";
 import { prisma } from "./db";
 import {
+  canAccessStaffAdmin,
   canManageUsers,
   ensureAdminUsers,
   ensureSuperAdminRole,
@@ -13,7 +14,7 @@ import {
 import { safeVerifyPassword } from "./passwords";
 
 export type { Role };
-export { canManageUsers, isStaffRole, isGlobalStaffRole };
+export { canAccessStaffAdmin, canManageUsers, isStaffRole, isGlobalStaffRole };
 
 export type SessionData = {
   authenticated?: boolean;
@@ -34,6 +35,8 @@ export type ViewerPayload = {
   role: Role;
   canEdit: boolean;
   canManageUsers: boolean;
+  /** Users + Assignments tabs (ADMIN and SUPERADMIN). */
+  canAccessStaffAdmin: boolean;
   user: string;
   email: string;
 };
@@ -43,6 +46,7 @@ export function viewerPayload(user: AuthUser): ViewerPayload {
     role: user.role,
     canEdit: isStaffRole(user.role),
     canManageUsers: canManageUsers(user),
+    canAccessStaffAdmin: canAccessStaffAdmin(user),
     user: user.email,
     email: user.email,
   };

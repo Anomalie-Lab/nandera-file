@@ -112,6 +112,8 @@ export const storeSchema = z
       .object({
         role: z.enum(["SUPERADMIN", "ADMIN", "SELLER", "CLIENT"]),
         canEdit: z.boolean(),
+        canManageUsers: z.boolean().optional(),
+        canAccessStaffAdmin: z.boolean().optional(),
         user: z.string().default(""),
         email: z.string().default(""),
       })

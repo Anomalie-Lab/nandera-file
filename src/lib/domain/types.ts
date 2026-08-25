@@ -142,6 +142,7 @@ export type Viewer = {
   role: "SUPERADMIN" | "ADMIN" | "SELLER" | "CLIENT";
   canEdit: boolean;
   canManageUsers?: boolean;
+  canAccessStaffAdmin?: boolean;
   user: string;
   email: string;
 };

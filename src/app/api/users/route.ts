@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireSuperAdmin } from "@/lib/auth";
+import { requireGlobalStaff, requireSuperAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import {
@@ -15,15 +15,17 @@ const createSchema = z.object({
   role: z.enum(["ADMIN", "SELLER"]).optional(),
 });
 
+/** ADMIN + SUPERADMIN can list users. */
 export async function GET() {
-  const admin = await requireSuperAdmin();
+  const admin = await requireGlobalStaff();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const users = await listStaffUsers(prisma);
+  const users = await listStaffUsers(prisma, admin);
   return NextResponse.json({ users });
 }
 
+/** Only SUPERADMIN can create staff users. */
 export async function POST(request: Request) {
   const admin = await requireSuperAdmin();
   if (!admin) {

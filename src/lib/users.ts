@@ -34,7 +34,12 @@ export function isGlobalStaffRole(role: Role): boolean {
 }
 
 export function canManageUsers(user: { role: Role; email: string }): boolean {
-  return user.role === "SUPERADMIN" && isSuperAdminEmail(user.email);
+  return user.role === "SUPERADMIN";
+}
+
+/** ADMIN + SUPERADMIN: Users/Assignments tabs, passwords, role edits (except create/delete). */
+export function canAccessStaffAdmin(user: { role: Role }): boolean {
+  return isGlobalStaffRole(user.role);
 }
 
 function staffRoleForEmail(email: string): "SUPERADMIN" | "SELLER" {
@@ -107,21 +112,16 @@ export async function ensureAdminUsers(db: Db): Promise<string[]> {
     const role = staffRoleForEmail(email);
     const existing = await db.user.findUnique({ where: { email } });
     if (existing) {
-      // NANDERA_ADMINS defines bootstrap staff: Fernando=SUPERADMIN, others=SELLER.
-      // Keep them aligned on every ensure (login/seed).
-      if (
-        existing.role !== role ||
-        (role === "SUPERADMIN" && existing.clientId)
-      ) {
-        await db.user.update({
-          where: { id: existing.id },
-          data: {
-            role,
-            clientId: role === "SUPERADMIN" ? null : existing.clientId,
-          },
-        });
+      // Bootstrap Fernando stays SUPERADMIN; other env staff keep whatever role was set in UI.
+      if (role === "SUPERADMIN") {
+        if (existing.role !== "SUPERADMIN" || existing.clientId) {
+          await db.user.update({
+            where: { id: existing.id },
+            data: { role: "SUPERADMIN", clientId: null },
+          });
+        }
       }
-      if (isStaffRole(role) && !existing.passwordPlain) {
+      if (isStaffRole(existing.role) && !existing.passwordPlain) {
         await db.user.update({
           where: { id: existing.id },
           data: { passwordPlain: admin.password },
@@ -153,7 +153,10 @@ export type ManagedUser = {
   clientName?: string | null;
 };
 
-export async function listStaffUsers(db: Db): Promise<ManagedUser[]> {
+export async function listStaffUsers(
+  db: Db,
+  viewer?: { role: Role }
+): Promise<ManagedUser[]> {
   const rows = await db.user.findMany({
     orderBy: [{ email: "asc" }],
     select: {
@@ -173,25 +176,33 @@ export async function listStaffUsers(db: Db): Promise<ManagedUser[]> {
         : role === "SELLER"
           ? 2
           : 3;
+  const hideSuperPasswords = viewer?.role === "ADMIN";
   return rows
     .sort((a, b) => {
       const rd = roleOrder(a.role) - roleOrder(b.role);
       if (rd !== 0) return rd;
       return a.email.localeCompare(b.email);
     })
-    .map((u) => ({
-      id: u.id,
-      email: u.email,
-      role: u.role,
-      createdAt: u.createdAt.toISOString(),
-      canDelete:
-        (u.role === "ADMIN" || u.role === "SELLER") &&
-        !isSuperAdminEmail(u.email),
-      password: staffDisplayPassword(u.email, u.role, u.passwordPlain),
-      ...(u.role === "CLIENT"
-        ? { clientName: u.client?.client ?? null }
-        : {}),
-    }));
+    .map((u) => {
+      const hidePassword =
+        hideSuperPasswords &&
+        (u.role === "SUPERADMIN" || isSuperAdminEmail(u.email));
+      return {
+        id: u.id,
+        email: u.email,
+        role: u.role,
+        createdAt: u.createdAt.toISOString(),
+        canDelete:
+          (u.role === "ADMIN" || u.role === "SELLER") &&
+          !isSuperAdminEmail(u.email),
+        password: hidePassword
+          ? null
+          : staffDisplayPassword(u.email, u.role, u.passwordPlain),
+        ...(u.role === "CLIENT"
+          ? { clientName: u.client?.client ?? null }
+          : {}),
+      };
+    });
 }
 
 export async function createStaffUser(
@@ -256,7 +267,8 @@ export async function deleteStaffUser(
 export async function updateUserPassword(
   db: Db,
   id: string,
-  password: string
+  password: string,
+  actor?: { role: Role }
 ): Promise<ManagedUser> {
   if (password.length < 8 || password.length > 200) {
     throw new UserAdminError("Password must be between 8 and 200 characters.");
@@ -266,6 +278,15 @@ export async function updateUserPassword(
     include: { client: { select: { client: true } } },
   });
   if (!row) throw new UserAdminError("User not found.");
+
+  if (
+    actor?.role === "ADMIN" &&
+    (row.role === "SUPERADMIN" || isSuperAdminEmail(row.email))
+  ) {
+    throw new UserAdminError(
+      "ADMIN cannot view or change a SUPERADMIN password."
+    );
+  }
 
   const updated = await db.user.update({
     where: { id },
@@ -309,25 +330,60 @@ function toManagedUser(
 }
 
 /**
- * SUPERADMIN may switch staff between ADMIN and SELLER.
+ * Change staff role. Actor rules:
+ * - SUPERADMIN may set ADMIN | SELLER | SUPERADMIN
+ * - ADMIN may set ADMIN | SELLER only (not SUPERADMIN)
+ * - Cannot change own role; cannot demote the bootstrap SUPERADMIN email
  * Leaving SELLER clears that user's client assignments.
  */
 export async function updateStaffUserRole(
   db: PrismaClient,
   id: string,
-  role: "ADMIN" | "SELLER"
+  role: "SUPERADMIN" | "ADMIN" | "SELLER",
+  actor?: { id: string; role: Role; email: string }
 ): Promise<ManagedUser> {
   const row = await db.user.findUnique({
     where: { id },
     include: { client: { select: { client: true } } },
   });
   if (!row) throw new UserAdminError("User not found.");
-  if (row.role === "SUPERADMIN" || isSuperAdminEmail(row.email)) {
-    throw new UserAdminError("The SUPERADMIN role cannot be changed.");
+
+  if (actor) {
+    if (actor.id === id) {
+      throw new UserAdminError("You cannot change your own role.");
+    }
+    if (role === "SUPERADMIN" && actor.role !== "SUPERADMIN") {
+      throw new UserAdminError("Only a SUPERADMIN can grant SUPERADMIN.");
+    }
+    if (actor.role === "ADMIN") {
+      if (role !== "ADMIN" && role !== "SELLER") {
+        throw new UserAdminError("ADMIN can only set ADMIN or SELLER roles.");
+      }
+      if (row.role === "SUPERADMIN" || isSuperAdminEmail(row.email)) {
+        throw new UserAdminError("ADMIN cannot change a SUPERADMIN account.");
+      }
+    } else if (actor.role !== "SUPERADMIN") {
+      throw new UserAdminError("Forbidden.");
+    }
   }
-  if (row.role !== "ADMIN" && row.role !== "SELLER") {
+
+  if (isSuperAdminEmail(row.email) && role !== "SUPERADMIN") {
     throw new UserAdminError(
-      "Only ADMIN and SELLER roles can be changed here."
+      "The primary SUPERADMIN account role cannot be changed."
+    );
+  }
+  if (row.role === "CLIENT") {
+    throw new UserAdminError(
+      "Only ADMIN, SELLER and SUPERADMIN roles can be changed here."
+    );
+  }
+  if (
+    row.role !== "ADMIN" &&
+    row.role !== "SELLER" &&
+    row.role !== "SUPERADMIN"
+  ) {
+    throw new UserAdminError(
+      "Only ADMIN, SELLER and SUPERADMIN roles can be changed here."
     );
   }
   if (row.role === role) {
@@ -335,7 +391,7 @@ export async function updateStaffUserRole(
   }
 
   const updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
-    if (row.role === "SELLER" && role === "ADMIN") {
+    if (row.role === "SELLER" && role !== "SELLER") {
       await tx.client.updateMany({
         where: { sellerId: id },
         data: { sellerId: null },
@@ -343,7 +399,7 @@ export async function updateStaffUserRole(
     }
     return tx.user.update({
       where: { id },
-      data: { role },
+      data: { role, clientId: role === "CLIENT" ? row.clientId : null },
       include: { client: { select: { client: true } } },
     });
   });

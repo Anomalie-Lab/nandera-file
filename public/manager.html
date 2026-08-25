@@ -60,14 +60,16 @@ body.role-client #panel-actions,
 body.role-client #panel-closed,
 body.role-client #panel-settings,
 body.role-client #panel-users{display:none!important}
-html:not(.role-superadmin) .tab[data-tab="users"],
-html:not(.role-superadmin) #panel-users,
-body:not(.role-superadmin) .tab[data-tab="users"],
-body:not(.role-superadmin) #panel-users{display:none!important}
-html:not(.role-superadmin) .tab[data-tab="assignments"],
-html:not(.role-superadmin) #panel-assignments,
-body:not(.role-superadmin) .tab[data-tab="assignments"],
-body:not(.role-superadmin) #panel-assignments{display:none!important}
+html:not(.role-staff-admin) .tab[data-tab="users"],
+html:not(.role-staff-admin) #panel-users,
+body:not(.role-staff-admin) .tab[data-tab="users"],
+body:not(.role-staff-admin) #panel-users{display:none!important}
+html:not(.role-staff-admin) .tab[data-tab="assignments"],
+html:not(.role-staff-admin) #panel-assignments,
+body:not(.role-staff-admin) .tab[data-tab="assignments"],
+body:not(.role-staff-admin) #panel-assignments{display:none!important}
+html:not(.role-superadmin) .user-create-card,
+body:not(.role-superadmin) .user-create-card{display:none!important}
 html.role-seller .clientbox [data-action="client-del"],
 body.role-seller .clientbox [data-action="client-del"],
 html.role-seller .tools [data-action="import"],
@@ -157,8 +159,10 @@ main{max-width:1180px;margin:0 auto;padding:16px}
 .masthead-center{display:flex;align-items:center;justify-content:center;flex:none;padding:0 18px;align-self:center}
 .masthead-right{display:flex;flex-direction:row;align-items:center;justify-content:flex-end;flex:none}
 .mark{width:46px;height:46px;border:1.5px solid var(--gold);border-radius:4px;display:grid;place-items:center;background:var(--navy);flex:none;position:relative}
-.mark.nandera-mark,.mark.client-mark:not(.client-mark-empty){width:auto;min-width:58px;max-width:150px;height:58px;background:#fff;padding:4px 6px;border:1.5px solid var(--gold);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center}
-.mark.nandera-mark img,.mark.client-mark:not(.client-mark-empty) img{height:46px;width:auto;max-width:138px;object-fit:contain;display:block}
+.mark.nandera-mark{width:200px;height:64px;min-width:200px;max-width:200px;background:#fff;padding:4px 8px;border:1.5px solid var(--gold);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.mark.nandera-mark img{width:100%;height:100%;max-width:none;object-fit:contain;object-position:center;display:block;image-rendering:auto;-webkit-optimize-contrast:auto}
+.mark.client-mark:not(.client-mark-empty){width:auto;min-width:58px;max-width:150px;height:58px;background:#fff;padding:4px 6px;border:1.5px solid var(--gold);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.mark.client-mark:not(.client-mark-empty) img{height:46px;width:auto;max-width:138px;object-fit:contain;display:block}
 .mark.client-mark-empty{width:72px;height:58px;background:#fff;border:1.5px dashed var(--line);border-radius:4px;display:flex;align-items:center;justify-content:center}
 .mark.nandera-mark::before,.mark.client-mark::before{display:none;content:none}
 .mark:not(.haslogo):not(.nandera-mark):not(.client-mark)::before{content:"◆";color:var(--gold-soft);font-size:17px}
@@ -341,11 +345,11 @@ tr{break-inside:avoid}
   </section>
   <section class="panel" id="panel-users">
     <div class="add-bar"><h2>Users</h2><span class="count" id="c-users"></span></div>
-    <div class="panel-intro">Only <b>fernando.arenales@nandera.com</b> (SUPERADMIN) creates staff and can change roles (ADMIN ↔ SELLER). <b>SELLER</b> users see/edit their assigned clients and can create new ones (auto-assigned to them). <b>ADMIN</b> sees all clients. Assign sellers in the <b>Assignments</b> tab.</div>
-    <div class="mcard"><div class="ttl"><span class="idx">+</span><span class="name">Create staff user</span></div>
+    <div class="panel-intro"><b>SUPERADMIN</b> creates and deletes staff and can promote another <b>SUPERADMIN</b>. <b>ADMIN</b> has the same access (all clients, Assignments, password/role edits) except create/delete users. <b>SELLER</b> only sees assigned clients.</div>
+    <div class="mcard user-create-card"><div class="ttl"><span class="idx">+</span><span class="name">Create staff user</span></div>
       <div class="grid"><div class="f"><label>Email</label><input id="newUserEmail" placeholder="nome@nandera.com" autocomplete="off"></div><div class="f"><label>Password</label><input id="newUserPassword" type="password" autocomplete="new-password"></div><div class="f"><label>Role</label><select id="newUserRole"><option value="SELLER">SELLER (vendedor)</option><option value="ADMIN">ADMIN (vê todos)</option></select></div></div>
       <button class="add-btn" data-action="user-create" style="margin-top:10px">Create user</button>
-      <div class="hint">Email must be @nandera.com. Minimum 8 characters for the password.</div>
+      <div class="hint">Email must be @nandera.com. Minimum 8 characters for the password. Only SUPERADMIN can create users.</div>
     </div>
     <div id="list-users"></div>
   </section>
@@ -394,16 +398,19 @@ tr{break-inside:avoid}
   }
 
   function applyViewerMode(viewer) {
-    window.ASR_VIEWER = viewer || { role: "ADMIN", canEdit: true, canManageUsers: false, user: "", email: "" };
+    window.ASR_VIEWER = viewer || { role: "ADMIN", canEdit: true, canManageUsers: false, canAccessStaffAdmin: true, user: "", email: "" };
     const client = window.ASR_VIEWER.role === "CLIENT";
     const seller = window.ASR_VIEWER.role === "SELLER";
     const superadmin = Boolean(window.ASR_VIEWER.canManageUsers);
+    const staffAdmin = Boolean(window.ASR_VIEWER.canAccessStaffAdmin) || window.ASR_VIEWER.role === "ADMIN" || window.ASR_VIEWER.role === "SUPERADMIN";
     document.documentElement.classList.toggle("role-client", client);
     document.body && document.body.classList.toggle("role-client", client);
     document.documentElement.classList.toggle("role-seller", seller);
     document.body && document.body.classList.toggle("role-seller", seller);
     document.documentElement.classList.toggle("role-superadmin", superadmin);
     document.body && document.body.classList.toggle("role-superadmin", superadmin);
+    document.documentElement.classList.toggle("role-staff-admin", staffAdmin);
+    document.body && document.body.classList.toggle("role-staff-admin", staffAdmin);
     if (client) {
       document.querySelectorAll(".tab").forEach(function (t) {
         t.classList.toggle("active", t.getAttribute("data-tab") === "report");
@@ -416,7 +423,7 @@ tr{break-inside:avoid}
     }
   }
 
-  window.ASR_VIEWER = { role: "ADMIN", canEdit: true, canManageUsers: false, user: "", email: "" };
+  window.ASR_VIEWER = { role: "ADMIN", canEdit: true, canManageUsers: false, canAccessStaffAdmin: true, user: "", email: "" };
 
   window.storage = {
     async get(_key) {
@@ -484,7 +491,7 @@ const DELIVERED_MODES=["Hidden","Count","Listed"];
 const STOPS=["Inquiry","Proposal","PO Confirmed","Production","Inspection","Cargo Ready","Booked","Loaded","In Transit","Arrived","Delivered"];
 const PALETTE=["#B8860B","#1B2A4A","#3C5C7A","#6B5AA6","#2E7D57","#9A5B12","#2C6C7C","#8A5A2B"];
 const PROB={Inquiry:0.25,Proposal:0.70};
-const NANDERA_LOGO="/LogoNandera.png";
+const NANDERA_LOGO="/LogoNandera.png?v=2";
 let pendingWonAlert=null, reportMode="client";
 
 function reportNanderaMark(){return `<div class="mark nandera-mark"><img src="${NANDERA_LOGO}" alt="Nandera"></div>`;}
@@ -915,14 +922,35 @@ function renderStaffUsers(users){
   const box=document.getElementById("list-users");if(!box)return;
   const count=document.getElementById("c-users");if(count)count.textContent=(users||[]).length+" user(s)";
   if(!users||!users.length){box.innerHTML='<div class="hint">No users.</div>';return;}
+  const isSuper=Boolean(window.ASR_VIEWER&&window.ASR_VIEWER.canManageUsers);
+  const meEmail=(window.ASR_VIEWER&&(window.ASR_VIEWER.email||window.ASR_VIEWER.user)||"").toLowerCase();
   box.innerHTML=users.map(u=>{
-    const del=u.canDelete?`<button class="del" data-user-del="${esc(u.id)}" data-email="${esc(u.email)}">Delete</button>`:`<span class="hint" style="margin-left:auto">${u.role==="CLIENT"?"Portal login":"Cannot delete"}</span>`;
+    const del=(isSuper&&u.canDelete)?`<button class="del" data-user-del="${esc(u.id)}" data-email="${esc(u.email)}">Delete</button>`:`<span class="hint" style="margin-left:auto">${u.role==="CLIENT"?"Portal login":(isSuper?"Cannot delete":"")}</span>`;
     const idx=u.role==="SUPERADMIN"?"★":u.role==="SELLER"?"S":u.role==="ADMIN"?"@":"◦";
     const sub=u.role==="CLIENT"&&u.clientName?`<div class="hint">Client: ${esc(u.clientName)}</div>`:"";
-    const roleCtrl=u.canDelete
-      ?`<div class="f"><label>Role</label><select data-user-role="${esc(u.id)}"><option value="SELLER" ${u.role==="SELLER"?"selected":""}>SELLER</option><option value="ADMIN" ${u.role==="ADMIN"?"selected":""}>ADMIN</option></select></div>`
-      :`<div class="f"><label>Role</label><input value="${esc(u.role)}" disabled></div>`;
-    const cred=`<div class="credbox" style="grid-template-columns:1fr 140px auto;align-items:end;margin-top:8px">${roleCtrl}<div class="f"><label>Password</label><input data-user-pwd="${esc(u.id)}" value="${esc(u.password||"")}" autocomplete="off"></div><div class="f"><label>&nbsp;</label><button class="add-btn" data-user-pwd-save="${esc(u.id)}" style="padding:9px 14px;width:auto;white-space:nowrap">Save</button></div></div>`;
+    const isSelf=(u.email||"").toLowerCase()===meEmail;
+    const staffRoles=["SELLER","ADMIN","SUPERADMIN"];
+    const isStaff=staffRoles.includes(u.role);
+    let roleCtrl;
+    if(u.role==="CLIENT"||isSelf||(u.role==="SUPERADMIN"&&!isSuper)||(u.email==="fernando.arenales@nandera.com"&&u.role==="SUPERADMIN"&&!isSuper)){
+      roleCtrl=`<div class="f"><label>Role</label><input value="${esc(u.role)}" disabled></div>`;
+    }else if(isStaff){
+      const opts=isSuper
+        ?[["SELLER","SELLER"],["ADMIN","ADMIN"],["SUPERADMIN","SUPERADMIN"]]
+        :[["SELLER","SELLER"],["ADMIN","ADMIN"]];
+      if(!isSuper&&u.role==="SUPERADMIN"){
+        roleCtrl=`<div class="f"><label>Role</label><input value="${esc(u.role)}" disabled></div>`;
+      }else{
+        roleCtrl=`<div class="f"><label>Role</label><select data-user-role="${esc(u.id)}">${opts.map(([v,l])=>`<option value="${v}" ${u.role===v?"selected":""}>${l}</option>`).join("")}</select></div>`;
+      }
+    }else{
+      roleCtrl=`<div class="f"><label>Role</label><input value="${esc(u.role)}" disabled></div>`;
+    }
+    const hideSuperPwd=!isSuper&&u.role==="SUPERADMIN";
+    const pwdField=hideSuperPwd
+      ?`<div class="f"><label>Password</label><input value="••••••••" disabled title="Hidden from ADMIN"></div><div class="f"><label>&nbsp;</label><span class="hint">Hidden</span></div>`
+      :`<div class="f"><label>Password</label><input data-user-pwd="${esc(u.id)}" value="${esc(u.password||"")}" autocomplete="off"></div><div class="f"><label>&nbsp;</label><button class="add-btn" data-user-pwd-save="${esc(u.id)}" style="padding:9px 14px;width:auto;white-space:nowrap">Save</button></div>`;
+    const cred=`<div class="credbox" style="grid-template-columns:1fr 140px auto;align-items:end;margin-top:8px">${roleCtrl}${pwdField}</div>`;
     return `<div class="mcard"><div class="ttl"><span class="idx">${idx}</span><span class="name">${esc(u.email)}</span><span class="tagoc oc-Open">${esc(u.role)}</span>${del}</div>
       ${sub}${cred}<div class="hint">Created ${esc((u.createdAt||"").slice(0,10)||"—")}</div></div>`;
   }).join("");
@@ -942,7 +970,7 @@ function renderAssignments(assignments,sellers){
   }).join("");
 }
 async function loadAssignments(){
-  if(!window.ASR_VIEWER||!window.ASR_VIEWER.canManageUsers)return;
+  if(!window.ASR_VIEWER||!window.ASR_VIEWER.canAccessStaffAdmin)return;
   try{
     const res=await fetch("/api/assignments",{credentials:"same-origin"});
     const j=await res.json().catch(()=>({}));
@@ -972,7 +1000,7 @@ async function saveUserPassword(id){
   }catch(err){alert(err&&err.message?err.message:"Could not update password.");}
 }
 async function saveUserRole(id,role){
-  if(!id||(role!=="ADMIN"&&role!=="SELLER"))return;
+  if(!id||(role!=="ADMIN"&&role!=="SELLER"&&role!=="SUPERADMIN"))return;
   try{
     const res=await fetch("/api/users/"+encodeURIComponent(id),{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({role})});
     const j=await res.json().catch(()=>({}));
@@ -981,7 +1009,7 @@ async function saveUserRole(id,role){
   }catch(err){alert(err&&err.message?err.message:"Could not update role.");await loadStaffUsers();}
 }
 async function loadStaffUsers(){
-  if(!window.ASR_VIEWER||!window.ASR_VIEWER.canManageUsers)return;
+  if(!window.ASR_VIEWER||!window.ASR_VIEWER.canAccessStaffAdmin)return;
   try{
     const res=await fetch("/api/users",{credentials:"same-origin"});
     const j=await res.json().catch(()=>({}));
@@ -1070,6 +1098,10 @@ document.addEventListener("DOMContentLoaded", function () {
       if (me && me.role === "SELLER") {
         document.documentElement.classList.add("role-seller");
         document.body.classList.add("role-seller");
+      }
+      if (me && me.canAccessStaffAdmin) {
+        document.documentElement.classList.add("role-staff-admin");
+        document.body.classList.add("role-staff-admin");
       }
       if (me && me.canManageUsers) {
         document.documentElement.classList.add("role-superadmin");

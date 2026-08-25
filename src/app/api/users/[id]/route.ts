@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireSuperAdmin } from "@/lib/auth";
+import { requireGlobalStaff, requireSuperAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import {
@@ -13,17 +13,18 @@ import {
 const patchSchema = z
   .object({
     password: z.string().min(8).max(200).optional(),
-    role: z.enum(["ADMIN", "SELLER"]).optional(),
+    role: z.enum(["SUPERADMIN", "ADMIN", "SELLER"]).optional(),
   })
   .refine((d) => d.password !== undefined || d.role !== undefined, {
     message: "Provide password and/or role.",
   });
 
+/** ADMIN + SUPERADMIN: update password / role (role rules enforced in lib). */
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const admin = await requireSuperAdmin();
+  const admin = await requireGlobalStaff();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -50,7 +51,10 @@ export async function PATCH(
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Provide a valid password (min 8) and/or role (ADMIN|SELLER)." },
+      {
+        error:
+          "Provide a valid password (min 8) and/or role (SUPERADMIN|ADMIN|SELLER).",
+      },
       { status: 400 }
     );
   }
@@ -58,10 +62,10 @@ export async function PATCH(
   try {
     let user =
       parsed.data.password !== undefined
-        ? await updateUserPassword(prisma, id, parsed.data.password)
+        ? await updateUserPassword(prisma, id, parsed.data.password, admin)
         : null;
     if (parsed.data.role !== undefined) {
-      user = await updateStaffUserRole(prisma, id, parsed.data.role);
+      user = await updateStaffUserRole(prisma, id, parsed.data.role, admin);
     }
     return NextResponse.json({ user });
   } catch (err) {
@@ -72,6 +76,7 @@ export async function PATCH(
   }
 }
 
+/** Only SUPERADMIN can delete staff users. */
 export async function DELETE(
   request: Request,
   context: { params: Promise<{ id: string }> }

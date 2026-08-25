@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireSuperAdmin } from "@/lib/auth";
+import { requireGlobalStaff } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit";
 import {
@@ -14,8 +14,9 @@ const putSchema = z.object({
   sellerId: z.string().min(1).max(64).nullable(),
 });
 
+/** ADMIN + SUPERADMIN manage seller ↔ client assignments. */
 export async function GET() {
-  const admin = await requireSuperAdmin();
+  const admin = await requireGlobalStaff();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -27,7 +28,7 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const admin = await requireSuperAdmin();
+  const admin = await requireGlobalStaff();
   if (!admin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
