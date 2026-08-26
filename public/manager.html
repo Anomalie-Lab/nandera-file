@@ -28,6 +28,8 @@ html,body{background:#ECE6D9;color:var(--ink);font-family:"IBM Plex Sans",system
 .btn:hover{background:rgba(255,255,255,.14)}
 .btn.gold{background:var(--gold);border-color:var(--gold);color:#241a02}.btn.gold:hover{background:var(--gold-soft)}
 .saved{font-size:11px;color:var(--gold-soft);opacity:0;transition:opacity .3s}.saved.show{opacity:1}
+.saved.dirty{opacity:1;color:#E8C56A}
+#saveBtn:disabled{opacity:.45;cursor:default;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);color:#EDE7D8}
 .whoami{font-size:11px;color:var(--gold-soft);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .credbox{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-top:8px}
 .credbox .f input{font-family:"IBM Plex Mono",monospace;background:#fff}
@@ -42,6 +44,10 @@ html.role-client .tools [data-action="import-template"],
 body.role-client .tools [data-action="import-template"],
 html.role-client .tools [data-action="export"],
 body.role-client .tools [data-action="export"],
+html.role-client #saveBtn,
+body.role-client #saveBtn,
+html.role-client #savedTag,
+body.role-client #savedTag,
 html.role-client .modetog,
 body.role-client .modetog{display:none!important}
 html.role-client .clientbox select,
@@ -277,7 +283,8 @@ tr{break-inside:avoid}
     <button class="iconbtn" data-action="client-del" title="Delete client">🗑</button></div>
   <div class="grow"></div>
   <span class="whoami" id="signedInAs"></span>
-  <span class="saved" id="savedTag">Saved ✓</span>
+  <span class="saved" id="savedTag"></span>
+  <button class="btn gold" type="button" id="saveBtn" data-action="save" disabled title="Save all edits to the server">Save</button>
   <div class="tools"><button class="btn" data-action="import-template">📄 Template</button><button class="btn" data-action="import">↥ Import Excel</button><button class="btn" data-action="export">↧ Backup</button><button class="btn gold" data-action="print">🖨 Save PDF</button></div>
 </div>
 
@@ -303,7 +310,7 @@ tr{break-inside:avoid}
 
   <section class="panel" id="panel-overview">
     <div class="add-bar"><h2>All Clients — Orders &amp; Pipeline</h2></div>
-    <div class="panel-intro">Check and update every client's <b>confirmed orders</b> and <b>commercial pipeline</b> in one place. Changes sync straight back to each client's report.</div>
+    <div class="panel-intro">Check and update every client's <b>confirmed orders</b> and <b>commercial pipeline</b> in one place. Click <b>Save</b> in the top bar when you are done.</div>
     <h3 class="ovh">Confirmed Orders &amp; Operations — all clients</h3>
     <div class="ovwrap" id="ov-orders"></div>
     <h3 class="ovh">Commercial Pipeline — all clients</h3>
@@ -545,39 +552,112 @@ function seedStore(){const c1={id:uid(),data:ventoSul()},c2={id:uid(),data:andes
 function emptyStore(){return {activeClientId:"",clients:[],logo:null,settings:{deliveredMode:"Hidden"}};}
 
 let store=emptyStore(),data;
-let saveChain=Promise.resolve(true),saveDirty=false;
+let saveChain=Promise.resolve(true),unsaved=false,saving=false,editEpoch=0,reportTimer=null;
 function useActive(){if(!store.clients.length){data=blankData("");return;}const c=store.clients.find(c=>c.id===store.activeClientId)||store.clients[0];store.activeClientId=c.id;data=c.data;}
-/** Serialize saves and re-run if the store changed mid-flight (avoids PUT races undoing Mark delivered / stage edits). */
-function save(){saveDirty=true;saveChain=saveChain.then(flushSave,flushSave);return saveChain;}
-async function flushSave(){
-  if(!saveDirty)return true;
-  let ok=true;
-  while(saveDirty){
-    saveDirty=false;
-    try{
-      if(window.storage&&window.storage.set){
-        const saved=await window.storage.set(KEY,JSON.stringify(store));
-        if(saved){
-          mergeActiveClientFromSaved(saved);
-          mergeSavedMeta(saved);
-        }
-      }
-    }catch(e){
-      ok=false;
-      if(e&&e.message){
-        alert(e.message);
-        if(/Forbidden/i.test(e.message)){
-          try{
-            const fresh=await load();
-            if(fresh){const mg=migrateStore(fresh);if(mg){store=mg;renderAll();}}
-          }catch(_){}
-        }
-      }
+function canEditStore(){return !(window.ASR_VIEWER&&window.ASR_VIEWER.canEdit===false);}
+/** Local edits only — nothing hits the server until Save is clicked. */
+function markDirty(){
+  if(!canEditStore())return;
+  unsaved=true;
+  editEpoch+=1;
+  updateSaveUi();
+}
+function updateSaveUi(){
+  const btn=document.getElementById("saveBtn");
+  const tag=document.getElementById("savedTag");
+  if(btn){
+    btn.disabled=saving||!unsaved;
+    btn.textContent=saving?"Saving…":"Save";
+  }
+  if(!tag)return;
+  if(saving){tag.textContent="Saving…";tag.classList.add("show");tag.classList.remove("dirty");}
+  else if(unsaved){tag.textContent="Unsaved changes";tag.classList.add("show","dirty");}
+  else{
+    tag.textContent="Saved ✓";
+    tag.classList.add("show");
+    tag.classList.remove("dirty");
+    setTimeout(function(){if(!unsaved&&!saving)tag.classList.remove("show");},1600);
+  }
+}
+/** Persist current store to the server (Save button only). */
+function save(){saveChain=saveChain.then(flushSave,flushSave);return saveChain;}
+function scheduleReport(){if(reportTimer)clearTimeout(reportTimer);reportTimer=setTimeout(function(){reportTimer=null;renderReport();},120);}
+/** Push the focused input into `store` before PUT (Save can fire before blur). */
+function commitActiveEdits(){
+  const t=document.activeElement;
+  if(!t||!t.dataset||!t.dataset.entity)return;
+  const coerce=t.dataset.field==="value"||t.dataset.field==="prod";
+  setField(t.dataset.entity,t.dataset.id,t.dataset.field,t.value,coerce?{coerce:true}:null);
+  if(coerce){
+    for(const c of store.clients){
+      const L=c.data[t.dataset.entity];if(!L)continue;
+      const row=L.find(x=>x.id===t.dataset.id);if(!row)continue;
+      const next=row[t.dataset.field];
+      if(String(t.value)!==String(next==null?"":next))t.value=next==null?"":next;
       break;
     }
   }
-  const t=document.getElementById("savedTag");
-  if(ok){t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1100);}
+}
+function coerceNumberFieldsInStore(){
+  store.clients.forEach(function(c){
+    ["pos","neg","closed"].forEach(function(k){
+      (c.data[k]||[]).forEach(function(row){
+        if("value" in row){
+          if(row.value===""||row.value==null)row.value="";
+          else{const n=Number(row.value);row.value=Number.isFinite(n)?n:0;}
+        }
+        if("prod" in row){
+          if(row.prod===""||row.prod==null)row.prod="";
+          else{const n=Number(row.prod);row.prod=Number.isFinite(n)?n:0;}
+        }
+      });
+    });
+  });
+}
+async function flushSave(){
+  if(!canEditStore())return false;
+  if(!unsaved&&!saving)return true;
+  let ok=true;
+  saving=true;updateSaveUi();
+  try{
+    while(true){
+      const epoch=editEpoch;
+      commitActiveEdits();
+      coerceNumberFieldsInStore();
+      const payload=JSON.stringify(store);
+      try{
+        if(!(window.storage&&window.storage.set)){
+          throw new Error("Storage unavailable");
+        }
+        const saved=await window.storage.set(KEY,payload);
+        if(!saved){
+          throw new Error("Save was blocked (read-only session). Changes were not written.");
+        }
+        mergeSavedMeta(saved);
+      }catch(e){
+        ok=false;
+        if(e&&e.message){
+          alert(e.message);
+          if(/Forbidden/i.test(e.message)){
+            try{
+              const fresh=await load();
+              if(fresh){const mg=migrateStore(fresh);if(mg){store=mg;unsaved=false;editEpoch+=1;renderAll();}}
+            }catch(_){}
+          }
+        }
+        break;
+      }
+      if(editEpoch===epoch){unsaved=false;break;}
+      /* User kept editing while the PUT was in flight — save again. */
+    }
+  }finally{
+    saving=false;updateSaveUi();
+    if(ok&&!unsaved){
+      const snap=captureFocus();
+      renderManage();
+      restoreFocus(snap);
+    }
+  }
   return ok;
 }
 async function load(){try{if(window.storage&&window.storage.get){const r=await window.storage.get(KEY);if(r&&r.value)return JSON.parse(r.value);}}catch(e){}return null;}
@@ -602,17 +682,27 @@ function sampleTag(s){const m={"N/A":["smp-na","N/A"],"Requested":["smp-req","Re
 function formatLastMod(iso){if(!iso)return "—";const d=new Date(iso);if(isNaN(d.getTime()))return "—";const day=String(d.getDate()).padStart(2,"0");const mon=d.toLocaleString("en",{month:"short"});const yr=d.getFullYear();const hh=String(d.getHours()).padStart(2,"0");const mm=String(d.getMinutes()).padStart(2,"0");return day+" "+mon+" "+yr+" · "+hh+":"+mm;}
 function activeRecord(){return store.clients.find(c=>c.id===store.activeClientId)||store.clients[0];}
 function mergeSavedMeta(saved){if(!saved||!Array.isArray(saved.clients))return;const byId={};saved.clients.forEach(c=>{byId[c.id]=c;});store.clients.forEach(c=>{const s=byId[c.id];if(!s)return;if(s.lastModified)c.lastModified=s.lastModified;if(s.access)c.access=s.access;});}
-/** After save, sync the active client's pos/closed/etc. from the server (avoids UI/DB drift). */
-function mergeActiveClientFromSaved(saved){
-  if(!saved||!Array.isArray(saved.clients))return;
-  const id=store.activeClientId;
-  const inc=saved.clients.find(c=>c.id===id);
-  const loc=store.clients.find(c=>c.id===id);
-  if(!inc||!loc)return;
-  loc.data=JSON.parse(JSON.stringify(inc.data));
-  if(inc.lastModified)loc.lastModified=inc.lastModified;
-  if(inc.access)loc.access=inc.access;
-  useActive();
+/** Capture / restore focus around full manage re-renders (selects wipe innerHTML). */
+function captureFocus(){
+  const el=document.activeElement;
+  if(!el||!el.dataset||!el.dataset.entity)return null;
+  const snap={entity:el.dataset.entity,id:el.dataset.id,field:el.dataset.field,tag:el.tagName};
+  if(typeof el.selectionStart==="number"){snap.start=el.selectionStart;snap.end=el.selectionEnd;}
+  return snap;
+}
+function restoreFocus(snap){
+  if(!snap)return;
+  const el=document.querySelector('[data-entity="'+snap.entity+'"][data-id="'+snap.id+'"][data-field="'+snap.field+'"]');
+  if(!el)return;
+  el.focus();
+  if(typeof snap.start==="number"&&typeof el.setSelectionRange==="function"){
+    try{el.setSelectionRange(snap.start,snap.end);}catch(_){}
+  }
+}
+function renderManageKeepFocus(){
+  const snap=captureFocus();
+  renderManage();
+  restoreFocus(snap);
 }
 function codeOf(name){const w=(name||"").replace(/[^A-Za-z ]/g,"").trim().split(/\s+/);let c=(w[0]?w[0][0]:"")+(w[1]?w[1][0]:(w[0]&&w[0][1]?w[0][1]:""));return (c||"C").toUpperCase();}
 function count(stage){return data.pos.filter(p=>p.stage===stage).length;}
@@ -789,7 +879,7 @@ function renderSettings(){const m=data.meta,k=data.kpi;const dm=(store.settings&
     <div class="mcard"><div class="ttl"><span class="idx">@</span><span class="name">Client portal access</span></div>
       <div class="hint">Share these credentials with the client. They can only open the <b>Report</b> tab, in view-only mode.</div>
       <div class="credbox"><div class="f"><label>User</label><input readonly value="${esc(acc.user||acc.email||"—")}"></div><div class="f"><label>Password</label><input readonly value="${esc(acc.password||"—")}"></div><div class="f"><label>Last updated</label><input readonly value="${esc(formatLastMod(rec.lastModified))}"></div></div>
-      <div class="readonly-note">The portal user is created from the client name (not an email). Last updated is the last change to this client's report data.</div></div>
+      <div class="readonly-note">Portal user is created from the client name when you click <b>Save</b> (not an email). Last updated is the last saved change to this client's report data.</div></div>
     <div class="mcard"><div class="ttl"><span class="idx">◆</span><span class="name">Client logo — ${esc(m.client||"Untitled")} <span style="font-weight:400;color:var(--muted);font-size:11px">(top-center of the report, between the title and client details)</span></span></div>
       <div class="logobox"><div class="logopreview">${logoPrev}</div><div><button class="add-btn" data-action="logo-upload" style="padding:9px 16px;width:auto">↥ Upload client logo</button>${data.meta.logo?`<button class="add-btn" data-action="logo-remove" style="padding:9px 16px;width:auto;margin-top:8px;border-color:#e6c9c4;color:var(--act)">Remove client logo</button>`:""}<div class="hint">PNG/JPG. Auto-resized. Each client has its own logo — switch clients to upload a different one.</div></div></div></div>
     <div class="mcard"><div class="ttl"><span class="idx">↦</span><span class="name">Deal Journey — delivered deals <span style="font-weight:400;color:var(--muted);font-size:11px">(applies to all clients)</span></span></div>
@@ -822,12 +912,18 @@ function renderClientSelect(){const el=document.getElementById("clientSelect");i
 function renderAll(){useActive();renderClientSelect();renderReport();renderManage();}
 
 function makeDraftPO(neg){return {id:uid(),code:"",ndr:"",product:neg.topic||"Won deal",qty:"",value:Number(neg.value)||0,incoterm:"",prod:0,insp:"Pending",inspDate:"",cargoReady:"",eta:"",port:"",stage:"Confirmed"};}
-function setField(entity,id,f,v){
+function setField(entity,id,f,v,opts){
+  const coerce=opts&&opts.coerce;
   if(entity==="meta"){data.meta[f]=v;if(f==="client")renderClientSelect();return;}
   if(entity==="kpi"){data.kpi[f]=v;return;}
   if(entity==="opt"){store.settings=store.settings||{};store.settings[f]=v;return;}
   for(const c of store.clients){const L=c.data[entity];if(L){const it=L.find(x=>x.id===id);if(it){
-    it[f]=(f==="value"||f==="prod")?(v===""?"":Number(v)):v;
+    if((f==="value"||f==="prod")&&coerce){
+      if(v===""||v==null)it[f]="";
+      else{const n=Number(v);it[f]=Number.isFinite(n)?n:0;}
+    }else{
+      it[f]=v;
+    }
     if(entity==="neg"&&f==="outcome"&&v==="Won"&&!it.wonPo){const npo=makeDraftPO(it);c.data.pos.unshift(npo);it.wonPo=npo.id;pendingWonAlert=it.ref;}
     return;}}}
 }
@@ -847,12 +943,39 @@ function syncDeliverButton(inputEl){
     btn.outerHTML='<button type="button" class="deliver" disabled title="Enter the client PO number first">Mark delivered</button>';
   }
 }
-main.addEventListener("input",e=>{const t=e.target;if(!t.dataset.entity)return;setField(t.dataset.entity,t.dataset.id,t.dataset.field,t.value);renderReport();syncDeliverButton(t);save();});
+main.addEventListener("input",e=>{
+  const t=e.target;if(!t.dataset||!t.dataset.entity)return;
+  setField(t.dataset.entity,t.dataset.id,t.dataset.field,t.value);
+  scheduleReport();
+  syncDeliverButton(t);
+  markDirty();
+});
+main.addEventListener("blur",e=>{
+  const t=e.target;if(!t||!t.dataset||!t.dataset.entity)return;
+  if(t.dataset.field!=="value"&&t.dataset.field!=="prod")return;
+  let prev;
+  for(const c of store.clients){
+    const L=c.data[t.dataset.entity];if(!L)continue;
+    const row=L.find(x=>x.id===t.dataset.id);if(!row)continue;
+    prev=row[t.dataset.field];
+    break;
+  }
+  setField(t.dataset.entity,t.dataset.id,t.dataset.field,t.value,{coerce:true});
+  for(const c of store.clients){
+    const L=c.data[t.dataset.entity];if(!L)continue;
+    const row=L.find(x=>x.id===t.dataset.id);if(!row)continue;
+    const next=row[t.dataset.field];
+    if(String(t.value)!==String(next==null?"":next))t.value=next==null?"":next;
+    if(String(prev)!==String(next))markDirty();
+    break;
+  }
+},true);
 main.addEventListener("change",e=>{const t=e.target;
   if(t&&t.dataset&&t.dataset.assignClient){saveAssignment(t.dataset.assignClient,t.value||null);return;}
   if(t&&t.dataset&&t.dataset.userRole){saveUserRole(t.dataset.userRole,t.value);return;}
-  if(!t.dataset.entity||t.tagName!=="SELECT")return;setField(t.dataset.entity,t.dataset.id,t.dataset.field,t.value);renderReport();renderManage();save();
-  if(pendingWonAlert){const r=pendingWonAlert;pendingWonAlert=null;setTimeout(()=>alert('"'+r+'" marked Won.\n\nA draft PO was created in Purchase Orders (value & product pre-filled) — open it to add the PO number and remaining details.'),40);}});
+  if(!t.dataset.entity||t.tagName!=="SELECT")return;setField(t.dataset.entity,t.dataset.id,t.dataset.field,t.value);
+  renderReport();renderManageKeepFocus();markDirty();
+  if(pendingWonAlert){const r=pendingWonAlert;pendingWonAlert=null;setTimeout(()=>alert('"'+r+'" marked Won.\n\nA draft PO was created in Purchase Orders (value & product pre-filled) — open it to add the PO number and remaining details.\n\nClick Save when you are done.'),40);}});
 
 document.addEventListener("click",e=>{const add=e.target.closest("[data-add]"),del=e.target.closest("[data-del]"),userDel=e.target.closest("[data-user-del]"),userPwdSave=e.target.closest("[data-user-pwd-save]"),deliver=e.target.closest("[data-deliver]"),reopen=e.target.closest("[data-reopen]"),mode=e.target.closest("[data-mode]"),act=e.target.closest("[data-action]"),tab=e.target.closest("[data-tab]");
   if(add){e.preventDefault();addItem(add.dataset.add,e);}
@@ -861,28 +984,24 @@ document.addEventListener("click",e=>{const add=e.target.closest("[data-add]"),d
   else if(mode){reportMode=mode.dataset.mode;document.querySelectorAll(".mt").forEach(x=>x.classList.toggle("active",x.dataset.mode===reportMode));renderReport();}
   else if(userPwdSave)saveUserPassword(userPwdSave.dataset.userPwdSave);
   else if(userDel)deleteStaffUser(userDel.dataset.userDel,userDel.dataset.email);
-  else if(del){const L=data[del.dataset.del];const i=L.findIndex(x=>x.id===del.dataset.id);if(i>-1)L.splice(i,1);renderReport();renderManage();save();}
+  else if(del){const L=data[del.dataset.del];const i=L.findIndex(x=>x.id===del.dataset.id);if(i>-1)L.splice(i,1);renderReport();renderManage();markDirty();}
   else if(act)doAction(act.dataset.action);
   else if(tab)switchTab(tab.dataset.tab);});
-document.getElementById("clientSelect").addEventListener("change",e=>{store.activeClientId=e.target.value;renderAll();save();switchTab("report");});
+document.getElementById("clientSelect").addEventListener("change",e=>{store.activeClientId=e.target.value;renderAll();switchTab("report");});
 
 function addItem(kind,e){
   if(e&&e.preventDefault)e.preventDefault();
   if(kind==="pos"){
     data.pos.push({id:uid(),code:"PO-2026-0000",ndr:"",product:"New product",qty:"1×40′HC",value:0,incoterm:"FOB Qingdao",prod:0,insp:"Pending",inspDate:"",cargoReady:"TBD",eta:"TBD",port:"Santos",stage:"Confirmed"});
-    requestAnimationFrame(function(){renderReport();renderManage();});
-    save().then(function(ok){
-      if(!ok)return;
-      useActive();renderManage();
-      alert("Purchase order added.\n\nFill in the client PO number — it stays in this tab until you click Mark delivered.");
-      switchTab("pos");
-    });
+    renderReport();renderManage();markDirty();
+    alert("Purchase order added.\n\nFill in the details, then click Save.");
+    switchTab("pos");
     return;
   }
   if(kind==="neg")data.neg.push({id:uid(),ref:"NEG-00",topic:"New topic",next:"define next step",owner:"Desk",due:"TBD",value:0,stage:"Inquiry",outcome:"Open",samples:"N/A"});
   if(kind==="act")data.act.push({id:uid(),type:"gold",text:"New alert",owner:"Trading Desk"});
   if(kind==="cl")data.closed.push({id:uid(),code:"",ndr:"",product:"Delivered product",value:0,delivered:"TBD",port:"Santos"});
-  renderReport();renderManage();save();}
+  renderReport();renderManage();markDirty();}
 async function reopenClosed(id,e){
   if(e&&e.preventDefault)e.preventDefault();
   if(!data||!Array.isArray(data.closed))return;
@@ -892,9 +1011,9 @@ async function reopenClosed(id,e){
   if(!confirm('Move "'+code+'" back to Purchase Orders?\n\nUse this if it was marked delivered by mistake.'))return;
   data.pos.push({id:uid(),code:c.code,ndr:c.ndr||"",product:c.product,qty:"",value:Number(c.value)||0,incoterm:"",prod:0,insp:"Pending",inspDate:"",cargoReady:"",eta:"",port:c.port||"",stage:"Confirmed"});
   data.closed.splice(i,1);
-  renderReport();renderManage();
-  const ok=await save();
-  if(ok){useActive();renderAll();alert('"'+code+'" is back in Purchase Orders.');switchTab("pos");}
+  renderReport();renderManage();markDirty();
+  alert('"'+code+'" is back in Purchase Orders.\n\nClick Save when you are done.');
+  switchTab("pos");
 }
 async function deliverPO(id,e){
   if(e&&e.preventDefault)e.preventDefault();
@@ -909,13 +1028,9 @@ async function deliverPO(id,e){
   const deliveredDate=(date.trim()||def);
   data.closed.unshift({id:uid(),code:p.code,ndr:p.ndr||"",product:p.product,value:Number(p.value)||0,delivered:deliveredDate,port:p.port});
   data.pos.splice(i,1);
-  renderReport();renderManage();
-  const ok=await save();
-  if(ok){
-    useActive();renderAll();
-    alert('Purchase order "'+code+'" marked as delivered on '+deliveredDate+'.\n\nIt is now in the Closed tab.');
-    switchTab("closed");
-  }
+  renderReport();renderManage();markDirty();
+  alert('Purchase order "'+code+'" marked as delivered on '+deliveredDate+'.\n\nIt is now in the Closed tab.\n\nClick Save when you are done.');
+  switchTab("closed");
 }
 function switchTab(name){document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===name));document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id==="panel-"+name));if(name==="report")requestAnimationFrame(fitReport);if(name==="users")loadStaffUsers();if(name==="assignments")loadAssignments();}
 function renderStaffUsers(users){
@@ -1043,19 +1158,20 @@ async function deleteStaffUser(id,email){
 }
 function resizeImage(file,max){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(w>h){if(w>max){h=h*max/w;w=max;}}else{if(h>max){w=w*max/h;h=max;}}const cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(img,0,0,w,h);res(cv.toDataURL("image/png"));};img.onerror=rej;img.src=r.result;};r.onerror=rej;r.readAsDataURL(file);});}
 function doAction(a){
+  if(a==="save"){save();return;}
   if(a==="print"){switchTab("report");requestAnimationFrame(()=>setTimeout(()=>window.print(),120));}
   else if(a==="export"){const blob=new Blob([JSON.stringify(store,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob),el=document.createElement("a");el.href=url;el.download="account-reports-"+new Date().toISOString().slice(0,10)+".json";el.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   else if(a==="user-create")createStaffUserFromForm();
   else if(a==="import")document.getElementById("fileImport").click();
   else if(a==="import-template"){const el=document.createElement("a");el.href="/api/store/import-template";el.download="nandera-client-template.xlsx";document.body.appendChild(el);el.click();el.remove();}
-  else if(a==="reset"){if(confirm("Reset ALL clients to the sample data? Current entries will be replaced.")){store=seedStore();renderAll();save();switchTab("report");}}
+  else if(a==="reset"){if(confirm("Reset ALL clients to the sample data? Current entries will be replaced.")){store=seedStore();renderAll();markDirty();switchTab("report");alert("Sample data loaded locally.\n\nClick Save to persist.");}}
   else if(a==="logo-upload")document.getElementById("logoInput").click();
-  else if(a==="logo-remove"){data.meta.logo=null;renderReport();renderManage();save();}
-  else if(a==="client-new"){const n=prompt("New client name:");if(n&&n.trim()){const c={id:uid(),data:blankData(n.trim())};if(window.ASR_SELLER_PENDING_NEW)window.ASR_SELLER_PENDING_NEW.add(c.id);store.clients.push(c);store.activeClientId=c.id;renderAll();Promise.resolve(save()).then(function(ok){if(!ok){store.clients=store.clients.filter(x=>x.id!==c.id);if(window.ASR_SELLER_PENDING_NEW)window.ASR_SELLER_PENDING_NEW.delete(c.id);store.activeClientId=store.clients[0]?store.clients[0].id:"";renderAll();return;}renderAll();switchTab("settings");});}}
-  else if(a==="client-rename"){if(!store.clients.length)return;const n=prompt("Rename client:",data.meta.client);if(n&&n.trim()){data.meta.client=n.trim();renderClientSelect();renderReport();renderManage();save();}}
-  else if(a==="client-del"){if(store.clients.length<=1){alert("Keep at least one client.");return;}if(confirm('Delete client "'+data.meta.client+'" and all its entries?')){store.clients=store.clients.filter(c=>c.id!==store.activeClientId);store.activeClientId=store.clients[0].id;renderAll();save();switchTab("report");}}
+  else if(a==="logo-remove"){data.meta.logo=null;renderReport();renderManage();markDirty();}
+  else if(a==="client-new"){const n=prompt("New client name:");if(n&&n.trim()){const c={id:uid(),data:blankData(n.trim())};if(window.ASR_SELLER_PENDING_NEW)window.ASR_SELLER_PENDING_NEW.add(c.id);store.clients.push(c);store.activeClientId=c.id;renderAll();markDirty();switchTab("settings");alert("Client created locally.\n\nClick Save to create the portal login (Settings → Client portal access).");}}
+  else if(a==="client-rename"){if(!store.clients.length)return;const n=prompt("Rename client:",data.meta.client);if(n&&n.trim()){data.meta.client=n.trim();renderClientSelect();renderReport();renderManage();markDirty();}}
+  else if(a==="client-del"){if(store.clients.length<=1){alert("Keep at least one client.");return;}if(confirm('Delete client "'+data.meta.client+'" and all its entries?')){store.clients=store.clients.filter(c=>c.id!==store.activeClientId);store.activeClientId=store.clients[0].id;renderAll();markDirty();switchTab("report");}}
 }
-document.getElementById("logoInput").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;try{data.meta.logo=await resizeImage(f,300);renderReport();renderManage();save();}catch(err){alert("Couldn't read that image.");}e.target.value="";});
+document.getElementById("logoInput").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;try{data.meta.logo=await resizeImage(f,300);renderReport();renderManage();markDirty();}catch(err){alert("Couldn't read that image.");}e.target.value="";});
 document.getElementById("fileImport").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;e.target.value="";
   const fd=new FormData();fd.append("file",f);
   try{
@@ -1064,11 +1180,16 @@ document.getElementById("fileImport").addEventListener("change",async e=>{const 
     if(res.status===401){window.location.href="/login";return;}
     if(!res.ok)throw new Error(j.error||(res.status===500?"Erro interno do servidor.":"Import failed"));
     const mg=migrateStore(j);if(!mg)throw new Error("Invalid store returned");
-    store=mg;renderAll();switchTab("report");
+    store=mg;unsaved=false;editEpoch+=1;renderAll();updateSaveUi();switchTab("report");
     alert("Cliente criado: "+(j.importedClient||data.meta.client)+"\n\nPortal user está em Settings → Client portal access.");
   }catch(err){alert(err&&err.message?err.message:"That Excel file couldn't be imported.");}});
 window.addEventListener("resize",()=>requestAnimationFrame(fitReport));
-(async function(){const saved=await load();if(saved){const mg=migrateStore(saved);if(mg)store=mg;}renderAll();requestAnimationFrame(fitReport);})();
+window.addEventListener("beforeunload",function(e){
+  if(!unsaved)return;
+  e.preventDefault();
+  e.returnValue="";
+});
+(async function(){const saved=await load();if(saved){const mg=migrateStore(saved);if(mg)store=mg;}unsaved=false;renderAll();updateSaveUi();requestAnimationFrame(fitReport);})();
 </script>
 
 <script>
@@ -1081,6 +1202,9 @@ document.addEventListener("DOMContentLoaded", function () {
     b.type = "button";
     b.textContent = "Sign out";
     b.addEventListener("click", async function () {
+      if (typeof unsaved !== "undefined" && unsaved) {
+        if (!confirm("You have unsaved changes. Sign out anyway?")) return;
+      }
       await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
       window.location.href = "/login";
     });
