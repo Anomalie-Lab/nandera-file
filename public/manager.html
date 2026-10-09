@@ -154,7 +154,16 @@ main{max-width:1180px;margin:0 auto;padding:16px}
 .mt{font:inherit;font-size:12px;font-weight:600;padding:6px 12px;background:#fff;color:var(--muted);border:none;cursor:pointer}
 .mt.active{background:var(--navy);color:#fff}
 #reportViewport{overflow:auto;background:#ECE6D9;border-radius:10px;padding:12px 0}
-#reportScale{transform-origin:top center}
+#reportScale{transform-origin:top left;margin:0 auto}
+.zoomctl{display:flex;align-items:center;gap:2px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:2px 3px 2px 10px;height:30px}
+.zoomctl .zt{font-size:11.5px;color:#BFC6D2;margin-right:6px}
+.zoomctl button{display:flex;align-items:center;justify-content:center;color:#EDE7D8;background:none;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;padding:0;outline:none}
+.zoomctl button:hover{background:rgba(255,255,255,.12)}
+.zoomctl button:active{background:rgba(255,255,255,.2)}
+.zoomctl button:focus-visible{box-shadow:0 0 0 2px var(--gold-soft)}
+.zoomctl button svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.zoomctl .zl{font-size:11.5px;color:#EDE7D8;min-width:38px;text-align:center}
+.zoomctl .zsep{width:1px;height:16px;background:rgba(255,255,255,.18);margin:0 3px}
 
 /* ===== REPORT ===== */
 .sheet{width:297mm;min-height:210mm;background:var(--paper);position:relative;margin:0 auto;box-shadow:0 18px 44px -16px rgba(20,30,50,.4);display:flex;flex-direction:column;padding:6mm 9mm 6mm}
@@ -239,7 +248,9 @@ tr{break-inside:avoid}
 .neg .ref{font-family:"IBM Plex Mono";font-size:7.6px;color:var(--gold);font-weight:600;white-space:nowrap}
 .neg .topic{font-weight:600;color:var(--ink)}.neg .nextcol{font-size:7.8px;color:var(--muted)}
 .stage-tag{font-size:6.8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:4px;white-space:nowrap;display:inline-block}
-.st-q{background:#EEF3F8;color:var(--logi)}.st-n{background:#FBF3DE;color:#8A6608}.st-p{background:#F1ECF7;color:#5B4A8A}.st-i{background:#F0F0F0;color:#555}
+.st-q{background:#EEF3F8;color:var(--logi)}.st-n{background:#FBF3DE;color:#8A6608}.st-p{background:#F1ECF7;color:#5B4A8A}.st-i{background:#F0F0F0;color:#555}.st-lost{background:#F4ECEB;color:var(--act)}
+.neg tr.lost-row td{color:var(--muted);background:#FBF8F6}
+.neg tr.lost-row td.val{text-decoration:line-through}
 .smp{font-size:6.6px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 5px;border-radius:4px;white-space:nowrap;display:inline-block}
 .smp-na{background:#EFEFEF;color:#777}.smp-req{background:#EEF3F8;color:var(--logi)}.smp-pend{background:#FBF3DE;color:#8A6608}.smp-deliv{background:#E9F2F4;color:#2C6C7C}.smp-appr{background:#EAF3F0;color:#1F7A57}.smp-rej{background:#F4ECEB;color:var(--act)}
 .actblock{border:1px solid var(--line);border-radius:6px;background:var(--card);overflow:hidden;break-inside:avoid}
@@ -259,6 +270,7 @@ tr{break-inside:avoid}
 
 @page{size:A4 landscape;margin:0}
 @media print{
+  html{zoom:1!important}
   html,body{background:#fff}
   .appbar,.tabs,.report-bar,#fileImport,#logoInput{display:none!important}
   main{max-width:none;margin:0;padding:0}
@@ -283,6 +295,7 @@ tr{break-inside:avoid}
     <button class="iconbtn" data-action="client-del" title="Delete client">🗑</button></div>
   <div class="grow"></div>
   <span class="whoami" id="signedInAs"></span>
+  <div class="zoomctl"><span class="zt">Zoom</span><button type="button" data-zoom="out" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 16 16"><path d="M3 8h10"/></svg></button><span class="zl" id="zoomLabel">100%</span><button type="button" data-zoom="in" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 16 16"><path d="M3 8h10M8 3v10"/></svg></button><span class="zsep"></span><button type="button" data-zoom="fullscreen" title="Full screen" aria-label="Full screen"><svg viewBox="0 0 16 16"><path d="M2 5.5V2h3.5M10.5 2H14v3.5M14 10.5V14h-3.5M5.5 14H2v-3.5"/></svg></button></div>
   <span class="saved" id="savedTag"></span>
   <button class="btn gold" type="button" id="saveBtn" data-action="save" disabled title="Save all edits to the server">Save</button>
   <div class="tools"><button class="btn" data-action="import-template">📄 Template</button><button class="btn" data-action="import">↥ Import Excel</button><button class="btn" data-action="export">↧ Backup</button><button class="btn gold" data-action="print">🖨 Save PDF</button></div>
@@ -711,6 +724,7 @@ function sumStage(stage){return data.pos.filter(p=>p.stage===stage).reduce((a,p)
 function renderReport(){if(reportMode==="all"){renderConsolidated();return;}
   const m=data.meta,k=data.kpi;
   const openNegs=data.neg.filter(n=>n.outcome==="Open");
+  const lostNegs=data.neg.filter(n=>n.outcome==="Lost");
   const openVal=data.pos.reduce((a,p)=>a+(Number(p.value)||0),0);
   const negVal=openNegs.reduce((a,n)=>a+(Number(n.value)||0),0);
   const closedVal=data.closed.reduce((a,c)=>a+(Number(c.value)||0),0);
@@ -742,8 +756,8 @@ function renderReport(){if(reportMode==="all"){renderConsolidated();return;}
     <td><span class="bar"><i style="width:${Math.max(0,Math.min(100,Number(p.prod)||0))}%"></i></span><span class="barlab">${Number(p.prod)||0}%</span></td>
     <td class="ic">${esc(p.cargoReady)}</td><td>${inspCell(p)}</td><td class="ic">${esc(p.eta)} · ${esc(p.port)}</td>
     <td><span class="pill ${pillClass(p.stage)}">${esc(p.stage)}</span></td></tr>`).join("");
-  const negRows=openNegs.map(n=>{const sc={Proposal:"st-p",Inquiry:"st-i"}[n.stage]||"st-i";
-    return `<tr><td class="ref">${esc(n.ref)}</td><td class="topic">${esc(n.topic)}</td><td>${sampleTag(n.samples)}</td><td class="nextcol">${esc(n.next)}</td><td class="ic">${esc(n.owner)}</td><td class="ic">${esc(n.due)}</td><td class="val">${money(n.value)}</td><td><span class="stage-tag ${sc}">${esc(n.stage)}</span></td></tr>`;}).join("");
+  const negRows=openNegs.concat(lostNegs).map(n=>{const lost=n.outcome==="Lost";const sc=lost?"st-lost":({Proposal:"st-p",Inquiry:"st-i"}[n.stage]||"st-i");
+    return `<tr${lost?' class="lost-row"':""}><td class="ref">${esc(n.ref)}</td><td class="topic">${esc(n.topic)}</td><td>${sampleTag(n.samples)}</td><td class="nextcol">${esc(n.next)}</td><td class="ic">${esc(n.owner)}</td><td class="ic">${esc(n.due)}</td><td class="val">${money(n.value)}</td><td><span class="stage-tag ${sc}">${lost?"Lost · "+esc(n.stage):esc(n.stage)}</span></td></tr>`;}).join("");
   const actRows=data.act.map(a=>`<div class="act-row"><div class="tag t-${a.type}">${ACT_SYM[a.type]||"◆"}</div><div>${boldCodes(a.text)} <span class="who">Owner: ${esc(a.owner)}</span></div></div>`).join("");
   const actLegend=ACT_TYPES.map(t=>`<span class="l"><i class="t-${t[0]}"></i> ${t[1]}</span>`).join("");
   const metaHtml=`<dl class="meta"><dt>Client</dt><dd>${esc(m.client)}</dd><dt>Account Manager</dt><dd>${esc(m.accountManager)}</dd><dt>Reporting Period</dt><dd>${esc(m.period)}</dd><dt>Issued</dt><dd class="accent">${esc(m.issued)}</dd><dt>Report No.</dt><dd class="mono">${esc(m.reportNo)}</dd><dt>Trade Lane</dt><dd>${esc(m.tradeLane)}</dd><dt>Last updated</dt><dd class="accent">${esc(formatLastMod(activeRecord()&&activeRecord().lastModified))}</dd></dl>`;
@@ -756,7 +770,7 @@ function renderReport(){if(reportMode==="all"){renderConsolidated();return;}
     <section class="journey"><div class="stops" style="grid-template-columns:repeat(${STOPS.length},1fr)">${stopsHtml}</div><div class="journey-legend"><span class="lg"><i style="background:#D9B24A"></i> Commercial / factory</span><span class="lg"><i style="background:#3C5C7A"></i> Logistics</span><span class="lg"><i style="background:#2E7D57"></i> Closed</span></div></section>
     <div class="sec-h"><span class="n">02</span><h3>Confirmed Orders &amp; Operations</h3><span class="rule"></span><span class="aside">${data.pos.length} active · US$ ${money(openVal)}</span></div>
     <table class="ops"><thead><tr><th>Client PO</th><th>NDR ref</th><th>Product</th><th class="num">Qty / Vol</th><th class="num">Value US$</th><th>Incoterm</th><th>Production</th><th>Cargo Ready</th><th>Inspection</th><th>ETA (Port)</th><th>Status</th></tr></thead><tbody>${opsRows||`<tr><td colspan="11" class="ic" style="padding:12px;text-align:center">No active purchase orders</td></tr>`}</tbody></table>
-    <div class="sec-h"><span class="n">03</span><h3>Commercial Pipeline</h3><span class="rule"></span><span class="aside">${openNegs.length} open · US$ ${money(negVal)}</span></div>
+    <div class="sec-h"><span class="n">03</span><h3>Commercial Pipeline</h3><span class="rule"></span><span class="aside">${openNegs.length} open · US$ ${money(negVal)}${lostNegs.length?` · ${lostNegs.length} lost`:""}</span></div>
     <table class="neg"><thead><tr><th>Ref</th><th>Topic / Product</th><th>Samples</th><th>Next action</th><th>Owner</th><th>Due</th><th class="num">Est. US$</th><th>Stage</th></tr></thead><tbody>${negRows||`<tr><td colspan="8" class="ic" style="padding:10px;text-align:center">No open topics</td></tr>`}</tbody></table>
     <div class="sec-h"><span class="n">04</span><h3>Action Items &amp; Alerts</h3><span class="rule"></span></div>
     <div class="actblock"><div class="mini-title">Open items <span class="cnt">${data.act.length} open</span></div><div class="act-legend">${actLegend}</div><div class="actions">${actRows||`<div class="act-row"><div>No open actions.</div></div>`}</div></div>
@@ -767,8 +781,8 @@ function renderReport(){if(reportMode==="all"){renderConsolidated();return;}
 
 function renderConsolidated(){
   const cs=store.clients.map((c,i)=>({id:c.id,name:c.data.meta.client,code:codeOf(c.data.meta.client),color:PALETTE[i%PALETTE.length],d:c.data}));
-  let POS=[],NEG=[],ACT=[];
-  cs.forEach(c=>{c.d.pos.forEach(p=>POS.push([p,c]));c.d.neg.filter(n=>n.outcome==="Open").forEach(n=>NEG.push([n,c]));c.d.act.forEach(a=>ACT.push([a,c]));});
+  let POS=[],NEG=[],LOST=[],ACT=[];
+  cs.forEach(c=>{c.d.pos.forEach(p=>POS.push([p,c]));c.d.neg.filter(n=>n.outcome==="Open").forEach(n=>NEG.push([n,c]));c.d.neg.filter(n=>n.outcome==="Lost").forEach(n=>LOST.push([n,c]));c.d.act.forEach(a=>ACT.push([a,c]));});
   const openVal=POS.reduce((a,x)=>a+(+x[0].value||0),0);
   const negVal=NEG.reduce((a,x)=>a+(+x[0].value||0),0);
   const closedVal=cs.reduce((a,c)=>a+c.d.closed.reduce((s,x)=>s+(+x.value||0),0),0);
@@ -803,8 +817,8 @@ function renderConsolidated(){
     <td class="prod">${esc(p.product)}</td><td class="num">${esc(p.qty)}</td><td class="val">${(+p.value||0).toLocaleString("en-US")}</td>
     <td class="ic">${esc(p.incoterm)}</td><td class="ic">${esc(p.cargoReady)}</td><td>${inspCell(p)}</td>
     <td class="ic">${esc(p.eta)}${p.port?" · "+esc(p.port):""}</td><td><span class="pill ${pillClass(p.stage)}">${esc(p.stage)}</span></td></tr>`;}).join("");
-  const negRows=NEG.map(x=>{const n=x[0],c=x[1];const sc={Proposal:"st-p",Inquiry:"st-i"}[n.stage]||"st-i";
-    return `<tr><td><span class="ccode" style="background:${c.color}">${esc(c.code)}</span></td><td class="ref">${esc(n.ref)}</td><td class="topic">${esc(n.topic)}</td><td>${sampleTag(n.samples)}</td><td class="ic">${esc(n.owner)}</td><td class="ic">${esc(n.due)}</td><td class="val">${money(n.value)}</td><td><span class="stage-tag ${sc}">${esc(n.stage)}</span></td></tr>`;}).join("");
+  const negRows=NEG.concat(LOST).map(x=>{const n=x[0],c=x[1];const lost=n.outcome==="Lost";const sc=lost?"st-lost":({Proposal:"st-p",Inquiry:"st-i"}[n.stage]||"st-i");
+    return `<tr${lost?' class="lost-row"':""}><td><span class="ccode" style="background:${c.color}">${esc(c.code)}</span></td><td class="ref">${esc(n.ref)}</td><td class="topic">${esc(n.topic)}</td><td>${sampleTag(n.samples)}</td><td class="ic">${esc(n.owner)}</td><td class="ic">${esc(n.due)}</td><td class="val">${money(n.value)}</td><td><span class="stage-tag ${sc}">${lost?"Lost · "+esc(n.stage):esc(n.stage)}</span></td></tr>`;}).join("");
   const actRows=ACT.map(x=>{const a=x[0],c=x[1];return `<div class="act-row"><div class="tag t-${a.type}">${ACT_SYM[a.type]||"◆"}</div><div><span class="ccode" style="background:${c.color};margin-right:5px">${esc(c.code)}</span>${boldCodes(a.text)} <span class="who">Owner: ${esc(a.owner)}</span></div></div>`;}).join("");
   const actLegend=ACT_TYPES.map(t=>`<span class="l"><i class="t-${t[0]}"></i> ${t[1]}</span>`).join("");
   const fc=cs.map(c=>{const realised=c.d.closed.reduce((a,z)=>a+(+z.value||0),0);const orderbook=c.d.pos.reduce((a,p)=>a+(+p.value||0),0);const weighted=c.d.neg.filter(n=>n.outcome==="Open").reduce((a,n)=>a+(+n.value||0)*(PROB[n.stage]||0),0);return {c,realised,orderbook,weighted,proj:realised+orderbook+weighted};});
@@ -824,7 +838,7 @@ function renderConsolidated(){
     <section class="journey"><div class="stops" style="grid-template-columns:repeat(${STOPS.length},1fr)">${stopsHtml}</div><div class="journey-legend"><span class="lg"><i style="background:#D9B24A"></i> Commercial / factory</span><span class="lg"><i style="background:#3C5C7A"></i> Logistics</span><span class="lg"><i style="background:#2E7D57"></i> Closed</span></div></section>
     <div class="sec-h"><span class="n">02</span><h3>Confirmed Orders &amp; Operations — All Clients</h3><span class="rule"></span><span class="aside">${POS.length} active · US$ ${money(openVal)}</span></div>
     <table class="ops"><thead><tr><th>Client</th><th>Client PO</th><th>NDR ref</th><th>Product</th><th class="num">Qty / Vol</th><th class="num">Value US$</th><th>Incoterm</th><th>Cargo Ready</th><th>Inspection</th><th>ETA (Port)</th><th>Status</th></tr></thead><tbody>${opsRows||`<tr><td colspan="11" class="ic" style="padding:12px;text-align:center">No active orders</td></tr>`}</tbody></table>
-    <div class="sec-h"><span class="n">03</span><h3>Commercial Pipeline — All Clients</h3><span class="rule"></span><span class="aside">${NEG.length} open · US$ ${money(negVal)}</span></div>
+    <div class="sec-h"><span class="n">03</span><h3>Commercial Pipeline — All Clients</h3><span class="rule"></span><span class="aside">${NEG.length} open · US$ ${money(negVal)}${LOST.length?` · ${LOST.length} lost`:""}</span></div>
     <table class="neg"><thead><tr><th>Client</th><th>Ref</th><th>Topic / Product</th><th>Samples</th><th>Owner</th><th>Due</th><th class="num">Est. US$</th><th>Stage</th></tr></thead><tbody>${negRows||`<tr><td colspan="8" class="ic" style="padding:10px;text-align:center">No open topics</td></tr>`}</tbody></table>
     <div class="sec-h"><span class="n">04</span><h3>Action Items &amp; Alerts — All Clients</h3><span class="rule"></span></div>
     <div class="actblock"><div class="mini-title">Open items <span class="cnt">${ACT.length} open</span></div><div class="act-legend">${actLegend}</div><div class="actions">${actRows||`<div class="act-row"><div>No open actions.</div></div>`}</div></div>
@@ -836,8 +850,19 @@ function renderConsolidated(){
   fitReport();
 }
 
+const ZOOM_STEPS=[0.25,0.33,0.5,0.67,0.75,0.8,0.9,1,1.1,1.25,1.5,1.75,2,2.5,3];
+let pageZoom=(()=>{const v=parseFloat(localStorage.getItem("asr-page-zoom"));return ZOOM_STEPS.includes(v)?v:1;})();
+function applyPageZoom(){document.documentElement.style.zoom=pageZoom===1?"":String(pageZoom);
+  const zl=document.getElementById("zoomLabel");if(zl)zl.textContent=Math.round(pageZoom*100)+"%";
+  localStorage.setItem("asr-page-zoom",String(pageZoom));requestAnimationFrame(fitReport);}
+function setPageZoom(dir){
+  if(dir==="fullscreen"){if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen?.();return;}
+  const i=ZOOM_STEPS.indexOf(pageZoom);
+  if(dir==="in"&&i<ZOOM_STEPS.length-1)pageZoom=ZOOM_STEPS[i+1];
+  else if(dir==="out"&&i>0)pageZoom=ZOOM_STEPS[i-1];
+  applyPageZoom();}
 function fitReport(){const vp=document.getElementById("reportViewport"),sc=document.getElementById("reportScale"),sheet=sc.querySelector(".sheet");if(!sheet)return;
-  const avail=vp.clientWidth-4,W=1122.5,scale=Math.min(1,avail/W);sc.style.transform="scale("+scale+")";const h=sheet.getBoundingClientRect().height;sc.style.height=h+"px";
+  const W=1122.5,scale=Math.min(1,(vp.clientWidth-4)/W);sc.style.transform="scale("+scale+")";sc.style.width=(W*scale)+"px";const h=sheet.offsetHeight*scale;sc.style.height=h+"px";
   const pages=Math.max(1,Math.ceil(h/(793.7*scale)));document.getElementById("pageTag").textContent=pages+(pages>1?" pages":" page");}
 
 function field(entity,id,name,label,val,opts){const v=esc(val==null?"":val);
@@ -1189,6 +1214,8 @@ window.addEventListener("beforeunload",function(e){
   e.preventDefault();
   e.returnValue="";
 });
+document.addEventListener("click",e=>{const z=e.target.closest("[data-zoom]");if(z)setPageZoom(z.dataset.zoom);});
+applyPageZoom();
 (async function(){const saved=await load();if(saved){const mg=migrateStore(saved);if(mg)store=mg;}unsaved=false;renderAll();updateSaveUi();requestAnimationFrame(fitReport);})();
 </script>
 
